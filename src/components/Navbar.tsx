@@ -1,5 +1,5 @@
 import React from 'react';
-import { Cpu, Wifi, WifiOff, Lock, CheckCircle2 } from 'lucide-react';
+import { Wifi, WifiOff, Lock, CheckCircle2 } from 'lucide-react';
 import { PWAInstallButton } from './PWAInstallButton';
 import { ConnectionState, Device } from '../types';
 
@@ -36,9 +36,11 @@ export const Navbar: React.FC<NavbarProps> = ({
           onClick={() => onTabChange('dashboard')}
           className="flex items-center gap-2 text-slate-900 font-bold tracking-tight text-sm whitespace-nowrap shrink-0"
         >
-          <div className="w-7 h-7 rounded-lg bg-blue-600 text-white flex items-center justify-center">
-            <Cpu className="w-4 h-4" />
-          </div>
+          <img
+            src={`${import.meta.env.BASE_URL}logo.png`}
+            alt="Hydrogen Forge"
+            className="w-8 h-8 object-contain"
+          />
           <span>Hydrogen Forge</span>
         </button>
 

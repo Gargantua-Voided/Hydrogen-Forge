@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import {
   Plus,
-  Cpu,
   Wifi,
   WifiOff,
   Trash2,
@@ -85,7 +84,11 @@ export const DevicesView: React.FC<DevicesViewProps> = ({
 
       {devices.length === 0 ? (
         <div className="p-12 text-center border border-dashed border-slate-300 bg-white rounded-2xl text-slate-500 text-xs space-y-3">
-          <Cpu className="w-7 h-7 mx-auto text-slate-300" />
+          <img
+            src={`${import.meta.env.BASE_URL}logo.png`}
+            alt="Hydrogen Forge"
+            className="w-12 h-12 mx-auto object-contain opacity-85"
+          />
           <p className="font-semibold text-slate-700">No devices configured</p>
           <button
             type="button"
@@ -109,9 +112,11 @@ export const DevicesView: React.FC<DevicesViewProps> = ({
                 <div>
                   <div className="flex items-start justify-between">
                     <div className="flex items-center gap-3">
-                      <div className="w-9 h-9 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center">
-                        <Cpu className="w-5 h-5" />
-                      </div>
+                      <img
+                        src={`${import.meta.env.BASE_URL}logo.png`}
+                        alt="Hydrogen Forge"
+                        className="w-9 h-9 object-contain shrink-0"
+                      />
                       <div>
                         <h4 className="text-sm font-semibold text-slate-900">{device.name}</h4>
                         <div className="flex items-center gap-1.5 text-xs text-slate-500 mt-0.5">

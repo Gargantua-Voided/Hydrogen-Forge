@@ -48,6 +48,11 @@ export const DeviceUnlockModal: React.FC<DeviceUnlockModalProps> = ({
       <div className="w-full max-w-sm rounded-2xl bg-white border border-slate-200 p-5 shadow-xl">
         <div className="flex items-center justify-between pb-3 border-b border-slate-100">
           <div className="flex items-center gap-2">
+            <img
+              src={`${import.meta.env.BASE_URL}logo.png`}
+              alt="Hydrogen Forge"
+              className="w-6 h-6 object-contain"
+            />
             <Lock className="w-4 h-4 text-blue-600" />
             <h3 className="text-sm font-bold text-slate-900">Unlock {device.name}</h3>
           </div>

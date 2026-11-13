@@ -2,7 +2,6 @@ import React, { useState } from 'react';
 import {
   Plus,
   Wifi,
-  Cpu,
   CheckCircle2,
   AlertCircle,
   ArrowRight,
@@ -76,9 +75,11 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
       {/* Compact Device Strip */}
       <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-xs flex flex-wrap items-center justify-between gap-4">
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center shrink-0">
-            <Cpu className="w-5 h-5" />
-          </div>
+          <img
+            src={`${import.meta.env.BASE_URL}logo.png`}
+            alt="Hydrogen Forge"
+            className="w-10 h-10 object-contain shrink-0"
+          />
           <div>
             <div className="flex items-center gap-2 text-sm font-semibold text-slate-900">
               <span>{activeDevice ? activeDevice.name : 'No Device Selected'}</span>

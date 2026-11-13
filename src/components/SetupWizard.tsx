@@ -3,7 +3,6 @@ import {
   Check,
   ChevronRight,
   ChevronLeft,
-  Cpu,
   Usb,
   ShieldCheck,
   Download,
@@ -218,9 +217,11 @@ export const SetupWizard: React.FC<SetupWizardProps> = ({ onComplete, onCancel }
         {currentStep === 1 && (
           <div className="space-y-5">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center">
-                <Cpu className="w-5 h-5" />
-              </div>
+              <img
+                src={`${import.meta.env.BASE_URL}logo.png`}
+                alt="Hydrogen Forge"
+                className="w-10 h-10 object-contain shrink-0"
+              />
               <div>
                 <h2 className="text-base font-bold text-slate-900">ESP32-S3-DevKitC-1-N16R8</h2>
                 <p className="text-xs text-slate-500">Dual-USB Port Assignment</p>
