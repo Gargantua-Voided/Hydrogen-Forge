@@ -26,8 +26,8 @@ export default defineConfig(() => {
         includeAssets: ['icon.svg', 'apple-touch-icon.png', 'pwa-192x192.png', 'pwa-512x512.png'],
         manifest: {
           id: base,
-          name: 'ESP32-S3 Macro Commander',
-          short_name: 'MacroCmd',
+          name: 'Hydrogen Forge',
+          short_name: 'HydrogenForge',
           description: 'Wireless USB HID macro controller manager with German & US keyboard layouts.',
           theme_color: '#ffffff',
           background_color: '#f8fafc',

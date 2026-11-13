@@ -1,4 +1,4 @@
-# ESP32-S3-DevKitC-1-N16R8 Firmware
+# Hydrogen Forge — ESP32-S3-DevKitC-1-N16R8 Firmware
 
 ## USB Port Assignment
 The `ESP32-S3-DevKitC-1-N16R8` board has two independent USB ports:

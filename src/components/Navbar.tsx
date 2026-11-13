@@ -39,7 +39,7 @@ export const Navbar: React.FC<NavbarProps> = ({
           <div className="w-7 h-7 rounded-lg bg-blue-600 text-white flex items-center justify-center">
             <Cpu className="w-4 h-4" />
           </div>
-          <span>Macro Commander</span>
+          <span>Hydrogen Forge</span>
         </button>
 
         <nav className="hidden md:flex items-center gap-6 text-xs font-medium text-slate-500">
