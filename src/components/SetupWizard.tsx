@@ -11,7 +11,7 @@ import {
   RefreshCw,
   Eye,
   EyeOff,
-  Wifi,
+  Bluetooth,
   Keyboard,
   FileUp,
 } from 'lucide-react';
@@ -632,25 +632,43 @@ export const SetupWizard: React.FC<SetupWizardProps> = ({ onComplete, onCancel }
 
         {/* STEP 6 */}
         {currentStep === 6 && (
-          <div className="space-y-5 text-center py-2">
-            <div className="w-12 h-12 rounded-2xl bg-emerald-50 text-emerald-600 flex items-center justify-center mx-auto">
-              <CheckCircle2 className="w-6 h-6" />
+          <div className="space-y-5 text-center py-3">
+            <div className="flex items-center justify-center gap-3 max-w-xs mx-auto">
+              <div className="w-10 h-10 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-600 flex items-center justify-center shrink-0">
+                <CheckCircle2 className="w-5 h-5" />
+              </div>
+              <div className="h-0.5 flex-1 bg-gradient-to-r from-emerald-400 to-blue-500 rounded-full" />
+              <div className="relative w-11 h-11 rounded-xl bg-blue-600 text-white flex items-center justify-center shadow-sm shadow-blue-600/25 ring-4 ring-blue-500/15 shrink-0">
+                <Bluetooth className="w-5 h-5" />
+                <span className="absolute -top-1 -right-1 flex h-3 w-3">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-blue-400 opacity-75" />
+                  <span className="relative inline-flex rounded-full h-3 w-3 bg-blue-500 border-2 border-white" />
+                </span>
+              </div>
+              <div className="h-0.5 flex-1 border-t-2 border-dashed border-slate-200" />
+              <div className="w-10 h-10 rounded-xl bg-slate-50 border border-slate-200 text-slate-400 flex items-center justify-center shrink-0">
+                <Keyboard className="w-5 h-5" />
+              </div>
             </div>
 
             <div>
               <h3 className="text-base font-bold text-slate-900">Device Provisioned</h3>
               <p className="text-xs text-slate-500 mt-1">
-                Connect the Native USB OTG port to your target computer for HID keyboard output.
+                Plug Native USB OTG into the target computer.
               </p>
             </div>
 
             <button
               type="button"
               onClick={() => createdDevice && onComplete(createdDevice)}
-              className="inline-flex items-center gap-2 px-5 py-2.5 bg-blue-600 hover:bg-blue-500 text-white rounded-xl text-xs font-semibold"
+              className="inline-flex items-center gap-2 px-5 py-2.5 bg-blue-600 hover:bg-blue-500 text-white rounded-xl text-xs font-semibold shadow-sm shadow-blue-600/25 ring-2 ring-blue-500/20"
             >
-              <Wifi className="w-4 h-4" />
-              <span>Connect via BLE</span>
+              <span className="relative flex h-2 w-2">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-white opacity-75" />
+                <span className="relative inline-flex rounded-full h-2 w-2 bg-white" />
+              </span>
+              <Bluetooth className="w-4 h-4" />
+              <span>Connect BLE</span>
             </button>
           </div>
         )}

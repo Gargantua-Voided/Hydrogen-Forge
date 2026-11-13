@@ -1,7 +1,9 @@
 import React, { useState } from 'react';
 import {
   Plus,
-  Wifi,
+  Bluetooth,
+  BluetoothConnected,
+  Lock,
   CheckCircle2,
   AlertCircle,
   ArrowRight,
@@ -72,17 +74,17 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
 
   return (
     <div className="space-y-6">
-      {/* Compact Device Strip */}
-      <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-xs flex flex-wrap items-center justify-between gap-4">
-        <div className="flex items-center gap-3">
+      {/* Compact Device Strip with Visual Connection Bridge */}
+      <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-xs flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+        <div className="flex items-center gap-3 min-w-0">
           <img
             src={`${import.meta.env.BASE_URL}logo.png`}
             alt="Hydrogen Forge"
             className="w-10 h-10 object-contain shrink-0"
           />
-          <div>
+          <div className="min-w-0">
             <div className="flex items-center gap-2 text-sm font-semibold text-slate-900">
-              <span>{activeDevice ? activeDevice.name : 'No Device Selected'}</span>
+              <span className="truncate">{activeDevice ? activeDevice.name : 'No Device Selected'}</span>
               {activeDevice && (
                 <span className="text-xs font-mono font-normal text-slate-400">
                   v{activeDevice.firmware_version}
@@ -105,7 +107,83 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
           </div>
         </div>
 
-        <div className="flex items-center gap-2">
+        {/* Visual Flow: Device -> BLE Connect -> USB HID Keyboard */}
+        {activeDevice && (
+          <div className="flex items-center justify-center gap-2 flex-1 max-w-sm">
+            <div
+              className={`w-7 h-7 rounded-lg flex items-center justify-center border shrink-0 ${
+                connectionState === 'authenticated'
+                  ? 'bg-emerald-50 border-emerald-200 text-emerald-600'
+                  : 'bg-blue-50 border-blue-200 text-blue-600'
+              }`}
+              title={activeDevice.name}
+            >
+              <CheckCircle2 className="w-3.5 h-3.5" />
+            </div>
+
+            <div
+              className={`h-0.5 flex-1 rounded-full transition-colors ${
+                connectionState === 'authenticated'
+                  ? 'bg-emerald-400'
+                  : 'bg-gradient-to-r from-blue-400 to-blue-600 animate-pulse'
+              }`}
+            />
+
+            <button
+              type="button"
+              onClick={onConnectClick}
+              className={`inline-flex items-center gap-2 px-3.5 py-1.5 rounded-xl text-xs font-semibold transition-all whitespace-nowrap shrink-0 ${
+                connectionState === 'authenticated'
+                  ? 'bg-emerald-50 text-emerald-700 border border-emerald-200 hover:bg-emerald-100'
+                  : connectionState === 'connected'
+                  ? 'bg-amber-500 hover:bg-amber-400 text-white shadow-sm shadow-amber-500/25 ring-2 ring-amber-400/25'
+                  : 'bg-blue-600 hover:bg-blue-500 text-white shadow-sm shadow-blue-600/25 ring-2 ring-blue-500/20'
+              }`}
+            >
+              {connectionState === 'authenticated' ? (
+                <>
+                  <BluetoothConnected className="w-3.5 h-3.5" />
+                  <span>Connected</span>
+                </>
+              ) : connectionState === 'connected' ? (
+                <>
+                  <Lock className="w-3.5 h-3.5" />
+                  <span>Unlock</span>
+                </>
+              ) : (
+                <>
+                  <span className="relative flex h-2 w-2">
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-white opacity-75" />
+                    <span className="relative inline-flex rounded-full h-2 w-2 bg-white" />
+                  </span>
+                  <Bluetooth className="w-3.5 h-3.5" />
+                  <span>Connect BLE</span>
+                </>
+              )}
+            </button>
+
+            <div
+              className={`h-0.5 flex-1 rounded-full transition-colors ${
+                connectionState === 'authenticated'
+                  ? 'bg-emerald-400'
+                  : 'bg-slate-200 border-t border-dashed border-slate-300'
+              }`}
+            />
+
+            <div
+              className={`w-7 h-7 rounded-lg flex items-center justify-center border shrink-0 ${
+                connectionState === 'authenticated'
+                  ? 'bg-emerald-50 border-emerald-200 text-emerald-600'
+                  : 'bg-slate-50 border-slate-200 text-slate-400'
+              }`}
+              title="USB HID Keyboard"
+            >
+              <Keyboard className="w-3.5 h-3.5" />
+            </div>
+          </div>
+        )}
+
+        <div className="flex items-center gap-2 shrink-0 justify-end">
           <div className="flex items-center p-0.5 bg-slate-100 rounded-lg text-xs">
             <button
               type="button"
@@ -131,7 +209,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
             </button>
           </div>
 
-          {!activeDevice ? (
+          {!activeDevice && (
             <button
               type="button"
               onClick={onOpenSetupClick}
@@ -139,28 +217,6 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
             >
               <span>Setup Device</span>
               <ArrowRight className="w-3.5 h-3.5" />
-            </button>
-          ) : (
-            <button
-              type="button"
-              onClick={onConnectClick}
-              className={`inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-colors whitespace-nowrap ${
-                connectionState === 'authenticated'
-                  ? 'bg-emerald-50 text-emerald-700 border border-emerald-200 hover:bg-emerald-100'
-                  : 'bg-blue-600 hover:bg-blue-500 text-white'
-              }`}
-            >
-              {connectionState === 'authenticated' ? (
-                <>
-                  <CheckCircle2 className="w-3.5 h-3.5" />
-                  <span>Connected</span>
-                </>
-              ) : (
-                <>
-                  <Wifi className="w-3.5 h-3.5" />
-                  <span>{connectionState === 'connected' ? 'Unlock' : 'Connect BLE'}</span>
-                </>
-              )}
             </button>
           )}
         </div>

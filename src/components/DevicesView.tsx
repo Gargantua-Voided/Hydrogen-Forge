@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
 import {
   Plus,
-  Wifi,
-  WifiOff,
+  Bluetooth,
+  BluetoothOff,
   Trash2,
   Edit3,
   Download,
@@ -166,17 +166,21 @@ export const DevicesView: React.FC<DevicesViewProps> = ({
                       onClick={onDisconnect}
                       className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-rose-50 text-rose-600 hover:bg-rose-100 rounded-lg text-xs font-semibold"
                     >
-                      <WifiOff className="w-3.5 h-3.5" />
+                      <BluetoothOff className="w-3.5 h-3.5" />
                       <span>Disconnect</span>
                     </button>
                   ) : (
                     <button
                       type="button"
                       onClick={() => onConnect(device)}
-                      className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-blue-600 hover:bg-blue-500 text-white rounded-lg text-xs font-semibold"
+                      className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-blue-600 hover:bg-blue-500 text-white rounded-lg text-xs font-semibold shadow-sm shadow-blue-600/20"
                     >
-                      <Wifi className="w-3.5 h-3.5" />
-                      <span>Connect</span>
+                      <span className="relative flex h-2 w-2">
+                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-white opacity-75" />
+                        <span className="relative inline-flex rounded-full h-2 w-2 bg-white" />
+                      </span>
+                      <Bluetooth className="w-3.5 h-3.5" />
+                      <span>Connect BLE</span>
                     </button>
                   )}
                 </div>

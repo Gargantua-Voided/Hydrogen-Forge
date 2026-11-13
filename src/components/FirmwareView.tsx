@@ -1,9 +1,13 @@
 import React, { useState, useEffect } from 'react';
-import { Download, RefreshCw, Usb, ShieldAlert, CheckCircle2, FileUp } from 'lucide-react';
+import { Download, RefreshCw, Usb, ShieldAlert, CheckCircle2, FileUp, Bluetooth, ArrowRight } from 'lucide-react';
 import { firmwareFlasher, FlashProgress, BinaryImagePart } from '../services/firmwareFlasher';
 import { FirmwareManifest, FirmwareRelease } from '../types';
 
-export const FirmwareView: React.FC = () => {
+interface FirmwareViewProps {
+  onConnectClick?: () => void;
+}
+
+export const FirmwareView: React.FC<FirmwareViewProps> = ({ onConnectClick }) => {
   const [manifest, setManifest] = useState<FirmwareManifest | null>(null);
   const [selectedRelease, setSelectedRelease] = useState<FirmwareRelease | null>(null);
   const [baudRate, setBaudRate] = useState<number>(921600);
@@ -200,7 +204,7 @@ export const FirmwareView: React.FC = () => {
           </div>
         )}
 
-        <div className="flex items-center justify-between pt-2">
+        <div className="flex flex-wrap items-center justify-between gap-3 pt-2">
           {isComplete ? (
             <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-emerald-600">
               <CheckCircle2 className="w-4 h-4" />
@@ -213,24 +217,42 @@ export const FirmwareView: React.FC = () => {
             </span>
           )}
 
-          <button
-            type="button"
-            onClick={handleStartFlash}
-            disabled={isFlashing || !canFlash}
-            className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-xl text-xs font-semibold disabled:opacity-40"
-          >
-            {isFlashing ? (
-              <>
-                <RefreshCw className="w-4 h-4 animate-spin" />
-                <span>Flashing...</span>
-              </>
-            ) : (
-              <>
-                <Download className="w-4 h-4" />
-                <span>Flash ESP32-S3</span>
-              </>
+          <div className="flex items-center gap-2 ml-auto">
+            {isComplete && onConnectClick && (
+              <button
+                type="button"
+                onClick={onConnectClick}
+                className="inline-flex items-center gap-2 px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-semibold shadow-sm shadow-emerald-600/20 ring-2 ring-emerald-500/20"
+              >
+                <span className="relative flex h-2 w-2">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-white opacity-75" />
+                  <span className="relative inline-flex rounded-full h-2 w-2 bg-white" />
+                </span>
+                <Bluetooth className="w-4 h-4" />
+                <span>Connect BLE</span>
+                <ArrowRight className="w-3.5 h-3.5" />
+              </button>
             )}
-          </button>
+
+            <button
+              type="button"
+              onClick={handleStartFlash}
+              disabled={isFlashing || !canFlash}
+              className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-xl text-xs font-semibold disabled:opacity-40"
+            >
+              {isFlashing ? (
+                <>
+                  <RefreshCw className="w-4 h-4 animate-spin" />
+                  <span>Flashing...</span>
+                </>
+              ) : (
+                <>
+                  <Download className="w-4 h-4" />
+                  <span>Flash ESP32-S3</span>
+                </>
+              )}
+            </button>
+          </div>
         </div>
       </div>
 

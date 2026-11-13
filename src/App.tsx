@@ -305,7 +305,7 @@ export default function App() {
           />
         )}
 
-        {activeTab === 'firmware' && <FirmwareView />}
+        {activeTab === 'firmware' && <FirmwareView onConnectClick={() => handleConnectDevice()} />}
 
         {activeTab === 'settings' && (
           <SettingsView
