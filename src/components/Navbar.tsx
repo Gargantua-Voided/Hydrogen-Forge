@@ -37,44 +37,46 @@ export const Navbar: React.FC<NavbarProps> = ({
 
   return (
     <header className="sticky top-0 z-40 w-full border-b border-slate-200/80 bg-white/90 backdrop-blur-md">
-      <div className="max-w-6xl mx-auto px-4 sm:px-6 h-14 flex items-center justify-between gap-4">
-        <div className="flex items-center gap-6 min-w-0">
-          <button
-            type="button"
-            onClick={() => onTabChange('dashboard')}
-            className="flex items-center gap-2 text-slate-900 font-bold tracking-tight text-sm whitespace-nowrap shrink-0"
-          >
-            <img
-              src={`${import.meta.env.BASE_URL}logo.png`}
-              alt="Hydrogen Forge"
-              className="w-8 h-8 object-contain"
-            />
-            <span>Hydrogen Forge</span>
-          </button>
+      <div className="max-w-6xl mx-auto px-4 sm:px-6 h-14 flex items-center justify-between md:justify-start gap-5">
+        <button
+          type="button"
+          onClick={() => onTabChange('dashboard')}
+          className="flex items-center gap-2 text-slate-900 font-bold tracking-tight text-sm whitespace-nowrap shrink-0"
+        >
+          <img
+            src={`${import.meta.env.BASE_URL}logo.png`}
+            alt="Hydrogen Forge"
+            className="w-8 h-8 object-contain"
+          />
+          <span>Hydrogen Forge</span>
+        </button>
 
-          <nav className="hidden md:flex items-center gap-5 text-xs font-medium text-slate-500">
-            {navItems.map((item) => {
-              const isActive =
-                activeTab === item.id || (item.id === 'devices' && activeTab === 'firmware');
-              return (
-                <button
-                  key={item.id}
-                  type="button"
-                  onClick={() => onTabChange(item.id)}
-                  className={`py-1 transition-colors whitespace-nowrap shrink-0 border-b-2 ${
-                    isActive
-                      ? 'border-blue-600 text-slate-900 font-semibold'
-                      : 'border-transparent hover:text-slate-900'
-                  }`}
-                >
-                  {item.label}
-                </button>
-              );
-            })}
-          </nav>
+        <div className="hidden md:block h-5 w-px bg-slate-200 shrink-0" aria-hidden="true" />
 
-          <div className="hidden md:block h-5 w-px bg-slate-200 shrink-0" aria-hidden="true" />
+        <nav className="hidden md:flex items-center gap-5 text-xs font-medium text-slate-500">
+          {navItems.map((item) => {
+            const isActive =
+              activeTab === item.id || (item.id === 'devices' && activeTab === 'firmware');
+            return (
+              <button
+                key={item.id}
+                type="button"
+                onClick={() => onTabChange(item.id)}
+                className={`py-1 transition-colors whitespace-nowrap shrink-0 border-b-2 ${
+                  isActive
+                    ? 'border-blue-600 text-slate-900 font-semibold'
+                    : 'border-transparent hover:text-slate-900'
+                }`}
+              >
+                {item.label}
+              </button>
+            );
+          })}
+        </nav>
 
+        <div className="hidden md:block h-5 w-px bg-slate-200 shrink-0" aria-hidden="true" />
+
+        <div className="flex items-center gap-2 shrink-0">
           <button
             type="button"
             onClick={onConnectClick}
@@ -125,9 +127,7 @@ export const Navbar: React.FC<NavbarProps> = ({
               </>
             )}
           </button>
-        </div>
 
-        <div className="flex items-center gap-2 shrink-0">
           <PWAInstallButton />
         </div>
       </div>
