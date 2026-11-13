@@ -1,0 +1,6 @@
+{
+  "name": "ESP32-S3 Macro Commander",
+  "description": "Progressive Web Application for flashing, configuring, and wirelessly executing USB HID keyboard macros on an ESP32-S3 controller with German QWERTZ & US layouts.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
