@@ -26,7 +26,7 @@ class FirmwareFlasherService {
    */
   async loadManifest(): Promise<FirmwareManifest | null> {
     try {
-      const res = await fetch('/firmware/manifest.json');
+      const res = await fetch(`${import.meta.env.BASE_URL}firmware/manifest.json`);
       if (!res.ok) return null;
       return (await res.json()) as FirmwareManifest;
     } catch {
