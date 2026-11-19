@@ -27,7 +27,7 @@
         {
           "name": "firmware.bin",
           "offset": "0x10000",
-          "size": 605536,
+          "size": 606944,
           "url": "firmware/v1.2.0/firmware.bin"
         }
       ]
