@@ -301,10 +301,6 @@ void handleSerialCommands() {
             } else {
                 macroEngine.setLayout(LAYOUT_DE_QWERTZ);
             }
-            // Update BLE device name
-            NimBLEDevice::deinit(true);
-            setupBleServer();
-
             JsonDocument resp;
             resp["status"] = "PROVISIONED_SUCCESS";
             resp["device_name"] = auth.deviceName;
@@ -312,6 +308,9 @@ void handleSerialCommands() {
             String out;
             serializeJson(resp, out);
             Serial.println(out);
+            Serial.flush();
+            delay(200);
+            ESP.restart();
         } else {
             Serial.println("{\"status\":\"ERROR\",\"message\":\"Provisioning validation failed\"}");
         }

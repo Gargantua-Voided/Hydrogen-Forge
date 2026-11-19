@@ -20,15 +20,33 @@ class FirmwareFlasherService {
     return typeof navigator !== 'undefined' && 'serial' in navigator;
   }
 
+  private resolveAssetUrl(url: string): string {
+    if (/^https?:\/\//i.test(url)) return url;
+    const base = import.meta.env.BASE_URL || '/';
+    const cleanBase = base.endsWith('/') ? base : `${base}/`;
+    const cleanPath = url.startsWith('/') ? url.slice(1) : url;
+    return `${cleanBase}${cleanPath}`;
+  }
+
   /**
-   * Loads real firmware manifest if deployed alongside the PWA (e.g. from GitHub Releases/Actions).
-   * Returns null if no hosted release manifest is present.
+   * Loads real firmware manifest if deployed alongside the PWA (built by GitHub Actions).
+   * Verifies that the referenced binary file actually exists before returning the manifest.
    */
   async loadManifest(): Promise<FirmwareManifest | null> {
     try {
-      const res = await fetch(`${import.meta.env.BASE_URL}firmware/manifest.json`);
-      if (!res.ok) return null;
-      return (await res.json()) as FirmwareManifest;
+      const res = await fetch(this.resolveAssetUrl('firmware/manifest.json'));
+      const contentType = res.headers.get('content-type') || '';
+      if (!res.ok || !contentType.includes('application/json')) return null;
+
+      const manifest = (await res.json()) as FirmwareManifest;
+      const firstFile = manifest?.releases?.[0]?.files?.[0];
+      if (!firstFile) return null;
+
+      const head = await fetch(this.resolveAssetUrl(firstFile.url), { method: 'HEAD' });
+      const binType = head.headers.get('content-type') || '';
+      if (!head.ok || binType.includes('text/html')) return null;
+
+      return manifest;
     } catch {
       return null;
     }
@@ -40,11 +58,15 @@ class FirmwareFlasherService {
   async fetchReleaseFiles(release: FirmwareRelease): Promise<BinaryImagePart[]> {
     const parts: BinaryImagePart[] = [];
     for (const file of release.files) {
-      const res = await fetch(file.url);
-      if (!res.ok) {
-        throw new Error(`Failed to fetch ${file.name} (HTTP ${res.status})`);
+      const res = await fetch(this.resolveAssetUrl(file.url));
+      const contentType = res.headers.get('content-type') || '';
+      if (!res.ok || contentType.includes('text/html')) {
+        throw new Error(`Firmware file not found: ${file.name}`);
       }
       const buf = new Uint8Array(await res.arrayBuffer());
+      if (buf.byteLength === 0) {
+        throw new Error(`Firmware file is empty: ${file.name}`);
+      }
       parts.push({
         name: file.name,
         address: parseInt(file.offset, 16),

@@ -34,9 +34,9 @@ jobs:
       - name: Create Firmware Archive
         run: |
           mkdir -p release-assets
-          cp firmware/.pio/build/esp32-s3-devkitc-1/firmware.bin release-assets/esp32s3_macro_firmware.bin 2>/dev/null || touch release-assets/esp32s3_macro_firmware.bin
-          cp firmware/.pio/build/esp32-s3-devkitc-1/bootloader.bin release-assets/bootloader.bin 2>/dev/null || touch release-assets/bootloader.bin
-          cp firmware/.pio/build/esp32-s3-devkitc-1/partitions.bin release-assets/partitions.bin 2>/dev/null || touch release-assets/partitions.bin
+          cp firmware/.pio/build/esp32-s3-devkitc-1/firmware.bin release-assets/esp32s3_macro_firmware.bin
+          cp firmware/.pio/build/esp32-s3-devkitc-1/bootloader.bin release-assets/bootloader.bin
+          cp firmware/.pio/build/esp32-s3-devkitc-1/partitions.bin release-assets/partitions.bin
 
       - name: Publish GitHub Release
         if: startsWith(github.ref, 'refs/tags/v')

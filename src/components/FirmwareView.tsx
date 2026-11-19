@@ -94,23 +94,15 @@ export const FirmwareView: React.FC<FirmwareViewProps> = ({ onConnectClick }) =>
       </div>
 
       <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-xs space-y-4">
-        {manifest && manifest.releases.length > 0 && (
-          <div className="text-xs">
-            <label className="block font-medium text-slate-600 mb-1">Hosted Release</label>
-            <select
-              value={selectedRelease?.version || ''}
-              onChange={(e) => {
-                const r = manifest.releases.find((rel) => rel.version === e.target.value);
-                if (r) setSelectedRelease(r);
-              }}
-              className="w-full px-3 py-2 rounded-lg border border-slate-200 bg-white text-slate-900"
-            >
-              {manifest.releases.map((rel) => (
-                <option key={rel.version} value={rel.version}>
-                  {rel.title}
-                </option>
-              ))}
-            </select>
+        {manifest && manifest.releases.length > 0 && !firmwareFile && (
+          <div className="p-3 rounded-xl border border-emerald-200 bg-emerald-50/60 text-xs flex items-center justify-between gap-2">
+            <div className="flex items-center gap-2 text-emerald-800 font-medium">
+              <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+              <span>{selectedRelease?.title || manifest.releases[0].title}</span>
+            </div>
+            <span className="font-mono text-[11px] text-emerald-700 shrink-0">
+              {(selectedRelease || manifest.releases[0]).files.length} bins
+            </span>
           </div>
         )}
 
@@ -118,7 +110,13 @@ export const FirmwareView: React.FC<FirmwareViewProps> = ({ onConnectClick }) =>
           <label className="flex items-center justify-between p-3 rounded-xl border border-slate-200 hover:bg-slate-50 cursor-pointer">
             <span className="flex items-center gap-2 font-medium text-slate-700">
               <FileUp className="w-4 h-4 text-blue-600" />
-              <span>{firmwareFile ? firmwareFile.name : 'Select firmware.bin (0x10000)'}</span>
+              <span>
+                {firmwareFile
+                  ? firmwareFile.name
+                  : manifest
+                  ? 'Or select local firmware.bin (0x10000)'
+                  : 'Select firmware.bin (0x10000)'}
+              </span>
             </span>
             <input
               type="file"
@@ -178,17 +176,25 @@ export const FirmwareView: React.FC<FirmwareViewProps> = ({ onConnectClick }) =>
         </div>
 
         <div>
-          <div className="flex justify-between text-xs mb-1.5">
-            <span className="text-slate-600 capitalize">
+          <div className="flex justify-between text-xs mb-1.5 gap-2">
+            <span
+              className={`truncate ${
+                progress.stage === 'error'
+                  ? 'text-rose-600 font-medium'
+                  : 'text-slate-600 capitalize'
+              }`}
+            >
               {progress.stage}: {progress.logMessage}
             </span>
-            <span className="font-mono font-semibold text-slate-900 tabular-nums">
+            <span className="font-mono font-semibold text-slate-900 tabular-nums shrink-0">
               {progress.percentage}%
             </span>
           </div>
           <div className="w-full h-2 bg-slate-100 rounded-full overflow-hidden">
             <div
-              className="h-full bg-blue-600 transition-all duration-150"
+              className={`h-full transition-all duration-150 ${
+                progress.stage === 'error' ? 'bg-rose-500' : 'bg-blue-600'
+              }`}
               style={{ width: `${progress.percentage}%` }}
             />
           </div>

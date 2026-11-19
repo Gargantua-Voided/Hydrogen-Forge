@@ -37,6 +37,46 @@ jobs:
             npm install
           fi
 
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+
+      - name: Install PlatformIO Core
+        run: pip install platformio
+
+      - name: Build ESP32-S3 Firmware Binaries
+        working-directory: ./firmware
+        run: pio run
+
+      - name: Stage Firmware Assets for PWA
+        run: |
+          mkdir -p public/firmware/v1.2.0
+          cp firmware/.pio/build/esp32-s3-devkitc-1/bootloader.bin public/firmware/v1.2.0/bootloader.bin
+          cp firmware/.pio/build/esp32-s3-devkitc-1/partitions.bin public/firmware/v1.2.0/partitions.bin
+          cp firmware/.pio/build/esp32-s3-devkitc-1/firmware.bin public/firmware/v1.2.0/firmware.bin
+          node -e '
+            const fs = require("fs");
+            const dir = "public/firmware/v1.2.0";
+            const manifest = {
+              latest_version: "1.2.0",
+              releases: [{
+                version: "1.2.0",
+                release_date: new Date().toISOString().split("T")[0],
+                target_chip: "ESP32-S3-DevKitC-1-N16R8",
+                min_app_version: "1.0.0",
+                title: "v1.2.0 — ESP32-S3-DevKitC-1-N16R8 (16MB QIO)",
+                notes: ["USB-to-UART flash/provision + Native USB OTG HID Keyboard", "German QWERTZ & US layouts"],
+                files: [
+                  { name: "bootloader.bin", offset: "0x0", size: fs.statSync(`${dir}/bootloader.bin`).size, url: "firmware/v1.2.0/bootloader.bin" },
+                  { name: "partitions.bin", offset: "0x8000", size: fs.statSync(`${dir}/partitions.bin`).size, url: "firmware/v1.2.0/partitions.bin" },
+                  { name: "firmware.bin", offset: "0x10000", size: fs.statSync(`${dir}/firmware.bin`).size, url: "firmware/v1.2.0/firmware.bin" }
+                ]
+              }]
+            };
+            fs.writeFileSync("public/firmware/manifest.json", JSON.stringify(manifest, null, 2));
+          '
+
       - name: Typecheck and Lint
         run: npm run lint
 

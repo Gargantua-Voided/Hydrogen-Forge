@@ -462,21 +462,39 @@ export const SetupWizard: React.FC<SetupWizardProps> = ({ onComplete, onCancel }
               </div>
             </div>
 
-            {!manifest && (
-              <div className="space-y-2.5 text-xs">
-                <label className="flex items-center justify-between p-3 rounded-xl border border-slate-200 hover:bg-slate-50 cursor-pointer">
-                  <span className="flex items-center gap-2 font-medium text-slate-700">
-                    <FileUp className="w-4 h-4 text-blue-600" />
-                    <span>{customFirmwareFile ? customFirmwareFile.name : 'Select firmware.bin (0x10000)'}</span>
-                  </span>
-                  <input
-                    type="file"
-                    accept=".bin"
-                    onChange={(e) => setCustomFirmwareFile(e.target.files?.[0] || null)}
-                    className="hidden"
-                  />
-                </label>
+            {manifest && manifest.releases.length > 0 && !customFirmwareFile && (
+              <div className="p-3 rounded-xl border border-emerald-200 bg-emerald-50/60 text-xs flex items-center justify-between">
+                <div className="flex items-center gap-2 text-emerald-800 font-medium">
+                  <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                  <span>{manifest.releases[0].title}</span>
+                </div>
+                <span className="font-mono text-[11px] text-emerald-700">
+                  {manifest.releases[0].files.length} bins
+                </span>
+              </div>
+            )}
 
+            <div className="space-y-2.5 text-xs">
+              <label className="flex items-center justify-between p-3 rounded-xl border border-slate-200 hover:bg-slate-50 cursor-pointer">
+                <span className="flex items-center gap-2 font-medium text-slate-700">
+                  <FileUp className="w-4 h-4 text-blue-600" />
+                  <span>
+                    {customFirmwareFile
+                      ? customFirmwareFile.name
+                      : manifest
+                      ? 'Or override with local firmware.bin (0x10000)'
+                      : 'Select firmware.bin (0x10000)'}
+                  </span>
+                </span>
+                <input
+                  type="file"
+                  accept=".bin"
+                  onChange={(e) => setCustomFirmwareFile(e.target.files?.[0] || null)}
+                  className="hidden"
+                />
+              </label>
+
+              {(!manifest || customFirmwareFile) && (
                 <div className="grid grid-cols-2 gap-2">
                   <label className="flex items-center gap-2 p-2.5 rounded-xl border border-slate-200 hover:bg-slate-50 cursor-pointer text-slate-600 truncate">
                     <FileUp className="w-3.5 h-3.5 shrink-0" />
@@ -499,19 +517,31 @@ export const SetupWizard: React.FC<SetupWizardProps> = ({ onComplete, onCancel }
                     />
                   </label>
                 </div>
-              </div>
-            )}
+              )}
+            </div>
 
             <div className="space-y-2">
-              <div className="flex justify-between text-xs">
-                <span className="text-slate-600 capitalize">{flashProgress.stage}</span>
-                <span className="font-mono font-semibold text-slate-900 tabular-nums">
+              <div className="flex justify-between text-xs gap-2">
+                <span
+                  className={`truncate ${
+                    flashProgress.stage === 'error'
+                      ? 'text-rose-600 font-medium'
+                      : 'text-slate-600 capitalize'
+                  }`}
+                >
+                  {flashProgress.stage === 'error'
+                    ? flashProgress.logMessage
+                    : flashProgress.stage}
+                </span>
+                <span className="font-mono font-semibold text-slate-900 tabular-nums shrink-0">
                   {flashProgress.percentage}%
                 </span>
               </div>
               <div className="w-full h-2 bg-slate-100 rounded-full overflow-hidden">
                 <div
-                  className="h-full bg-blue-600 transition-all duration-150"
+                  className={`h-full transition-all duration-150 ${
+                    flashProgress.stage === 'error' ? 'bg-rose-500' : 'bg-blue-600'
+                  }`}
                   style={{ width: `${flashProgress.percentage}%` }}
                 />
               </div>

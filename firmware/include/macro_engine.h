@@ -1,6 +1,7 @@
 #pragma once
 
 #include <Arduino.h>
+#include <vector>
 #include "USB.h"
 #include "USBHIDKeyboard.h"
 #include "keyboard_layouts.h"
