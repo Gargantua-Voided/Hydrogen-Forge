@@ -46,44 +46,126 @@ class SerialProvisioningService {
     });
 
     await port.open({ baudRate: 115200 });
+
+    // Release DTR & RTS so the ESP32-S3 is neither held in reset nor forced into ROM bootloader
+    try {
+      await port.setSignals({ dataTerminalReady: false, requestToSend: false });
+    } catch {
+      // Ignore if driver doesn't support manual flow control signals
+    }
+
     this.activePort = port;
     return port;
   }
 
-  private async sendJsonCommand(port: any, commandObj: Record<string, unknown>, timeoutMs = 5000): Promise<any> {
+  private async writeJsonLine(port: any, commandObj: Record<string, unknown>): Promise<void> {
     const encoder = new TextEncoder();
-    const decoder = new TextDecoder();
-
     const writer = port.writable.getWriter();
-    await writer.write(encoder.encode(JSON.stringify(commandObj) + '\n'));
-    writer.releaseLock();
+    try {
+      await writer.write(encoder.encode(JSON.stringify(commandObj) + '\n'));
+    } finally {
+      writer.releaseLock();
+    }
+  }
 
+  /**
+   * Keeps one reader open on `port`:
+   * 1. Polls `PING` every 400ms (up to 6s) until the ESP32-S3 finishes booting and emits READY or PONG.
+   * 2. Once awake, sends `commandObj` (if not already PING) and waits for a matching JSON response.
+   */
+  private async waitForBootAndSend(
+    port: any,
+    commandObj: Record<string, unknown>,
+    expectedStatuses: string[]
+  ): Promise<any> {
+    const decoder = new TextDecoder();
     const reader = port.readable.getReader();
+    const recentLines: string[] = [];
     let buffer = '';
+    let pingTimer: ReturnType<typeof setInterval> | null = null;
+    let bootTimer: ReturnType<typeof setTimeout> | null = null;
+    let overallTimer: ReturnType<typeof setTimeout> | null = null;
+    let bootConfirmed = commandObj.command === 'PING';
+    let mainCommandSent = commandObj.command === 'PING';
+
+    const sendPingSafely = () => {
+      this.writeJsonLine(port, { command: 'PING' }).catch(() => {});
+    };
 
     try {
+      // Wait 250ms after DTR/RTS release, then poll PING until firmware finishes booting
+      bootTimer = setTimeout(() => {
+        if (!bootConfirmed) {
+          sendPingSafely();
+        } else if (commandObj.command === 'PING') {
+          this.writeJsonLine(port, commandObj).catch(() => {});
+        }
+      }, 250);
+
+      pingTimer = setInterval(() => {
+        if (!bootConfirmed) {
+          sendPingSafely();
+        } else if (commandObj.command === 'PING') {
+          this.writeJsonLine(port, commandObj).catch(() => {});
+        }
+      }, 500);
+
       const readPromise = (async () => {
         while (true) {
           const { value, done } = await reader.read();
-          if (done) break;
+          if (done) {
+            throw new Error('Serial stream closed before receiving response.');
+          }
           buffer += decoder.decode(value, { stream: true });
           const lines = buffer.split('\n');
-          for (const line of lines) {
-            const trimmed = line.trim();
+          buffer = lines.pop() ?? '';
+
+          for (const rawLine of lines) {
+            const trimmed = rawLine.trim();
+            if (!trimmed) continue;
+            recentLines.push(trimmed);
+            if (recentLines.length > 10) recentLines.shift();
+
             if (trimmed.startsWith('{') && trimmed.endsWith('}')) {
-              return JSON.parse(trimmed);
+              try {
+                const parsed = JSON.parse(trimmed);
+                if (!bootConfirmed && (parsed.status === 'READY' || parsed.status === 'PONG')) {
+                  bootConfirmed = true;
+                  if (pingTimer) {
+                    clearInterval(pingTimer);
+                    pingTimer = null;
+                  }
+                  if (!mainCommandSent) {
+                    mainCommandSent = true;
+                    await this.writeJsonLine(port, commandObj);
+                    continue;
+                  }
+                }
+                if (expectedStatuses.includes(parsed.status) || parsed.status === 'ERROR') {
+                  return parsed;
+                }
+              } catch {
+                // Ignore non-JSON lines containing braces
+              }
             }
           }
         }
-        throw new Error('Serial stream closed before receiving JSON response.');
       })();
 
-      const timeoutPromise = new Promise<never>((_, reject) =>
-        setTimeout(() => reject(new Error('ESP32-S3 UART response timed out.')), timeoutMs)
-      );
+      const timeoutPromise = new Promise<never>((_, reject) => {
+        overallTimer = setTimeout(() => {
+          const hint = recentLines.length > 0
+            ? ` UART output: "${recentLines.slice(-3).join(' | ')}"`
+            : ' Check that you selected the USB-to-UART COM port (not Native USB OTG) and firmware flashed cleanly.';
+          reject(new Error(`ESP32-S3 UART response timed out.${hint}`));
+        }, 8000);
+      });
 
       return await Promise.race([readPromise, timeoutPromise]);
     } finally {
+      if (bootTimer) clearTimeout(bootTimer);
+      if (pingTimer) clearInterval(pingTimer);
+      if (overallTimer) clearTimeout(overallTimer);
       try {
         await reader.cancel();
       } catch {
@@ -97,10 +179,7 @@ class SerialProvisioningService {
     let port: any = null;
     try {
       port = await this.requestAndOpenPort();
-      // Brief pause for UART bridge stabilization
-      await new Promise((r) => setTimeout(r, 150));
-
-      const resp = await this.sendJsonCommand(port, { command: 'PING' });
+      const resp = await this.waitForBootAndSend(port, { command: 'PING' }, ['PONG']);
       if (resp.status === 'PONG') {
         return {
           connected: true,
@@ -129,16 +208,18 @@ class SerialProvisioningService {
     let port: any = null;
     try {
       port = await this.requestAndOpenPort();
-      await new Promise((r) => setTimeout(r, 150));
-
-      const parsed = await this.sendJsonCommand(port, {
-        command: 'PROVISION',
-        device_name: payload.deviceName,
-        username: payload.username,
-        salt: payload.saltHex,
-        verifier: payload.verifierHex,
-        layout: payload.layout,
-      });
+      const parsed = await this.waitForBootAndSend(
+        port,
+        {
+          command: 'PROVISION',
+          device_name: payload.deviceName,
+          username: payload.username,
+          salt: payload.saltHex,
+          verifier: payload.verifierHex,
+          layout: payload.layout,
+        },
+        ['PROVISIONED_SUCCESS']
+      );
 
       if (parsed.status === 'PROVISIONED_SUCCESS') {
         return {
@@ -174,7 +255,7 @@ class SerialProvisioningService {
     let port: any = null;
     try {
       port = await this.requestAndOpenPort();
-      const resp = await this.sendJsonCommand(port, { command: 'FACTORY_RESET' });
+      const resp = await this.waitForBootAndSend(port, { command: 'FACTORY_RESET' }, ['RESET_OK']);
       return {
         success: resp.status === 'RESET_OK',
         message: resp.message || 'Factory reset command sent.',
@@ -188,6 +269,7 @@ class SerialProvisioningService {
         } catch {
           // Ignore
         }
+        this.activePort = null;
       }
     }
   }

@@ -198,6 +198,9 @@ void setup() {
     Serial.printf("Device: %s\n", auth.deviceName.c_str());
     Serial.printf("Status: %s\n", auth.isProvisioned ? "PROVISIONED" : "UNCONFIGURED");
     Serial.println("====================================");
+    Serial.printf("{\"status\":\"READY\",\"firmware\":\"%s\",\"hardware\":\"%s\",\"is_provisioned\":%s}\n",
+                  FIRMWARE_VERSION, HARDWARE_TARGET, auth.isProvisioned ? "true" : "false");
+    Serial.flush();
 }
 
 void setupBleServer() {
@@ -262,32 +265,44 @@ void loop() {
 
 // Handle USB Serial Provisioning & Diagnosis commands
 void handleSerialCommands() {
-    if (!Serial.available()) return;
+    static String serialRxBuffer = "";
+    while (Serial.available()) {
+        char c = (char)Serial.read();
+        if (c == '\r') continue;
+        if (c != '\n') {
+            if (serialRxBuffer.length() < 2048) {
+                serialRxBuffer += c;
+            }
+            continue;
+        }
 
-    String line = Serial.readStringUntil('\n');
-    line.trim();
-    if (line.length() == 0) return;
+        String line = serialRxBuffer;
+        serialRxBuffer = "";
+        line.trim();
+        if (line.length() == 0) continue;
 
-    JsonDocument doc;
-    DeserializationError err = deserializeJson(doc, line);
-    if (err) {
-        Serial.println("{\"status\":\"ERROR\",\"message\":\"Invalid JSON\"}");
-        return;
-    }
+        JsonDocument doc;
+        DeserializationError err = deserializeJson(doc, line);
+        if (err) {
+            Serial.println("{\"status\":\"ERROR\",\"message\":\"Invalid JSON\"}");
+            Serial.flush();
+            continue;
+        }
 
-    const char* cmd = doc["command"] | "";
+        const char* cmd = doc["command"] | "";
 
-    if (strcmp(cmd, "PING") == 0) {
-        JsonDocument resp;
-        resp["status"] = "PONG";
-        resp["firmware"] = FIRMWARE_VERSION;
-        resp["hardware"] = HARDWARE_TARGET;
-        resp["device_name"] = auth.deviceName;
-        resp["is_provisioned"] = auth.isProvisioned;
-        String out;
-        serializeJson(resp, out);
-        Serial.println(out);
-    }
+        if (strcmp(cmd, "PING") == 0) {
+            JsonDocument resp;
+            resp["status"] = "PONG";
+            resp["firmware"] = FIRMWARE_VERSION;
+            resp["hardware"] = HARDWARE_TARGET;
+            resp["device_name"] = auth.deviceName;
+            resp["is_provisioned"] = auth.isProvisioned;
+            String out;
+            serializeJson(resp, out);
+            Serial.println(out);
+            Serial.flush();
+        }
     else if (strcmp(cmd, "PROVISION") == 0) {
         const char* name = doc["device_name"] | "";
         const char* user = doc["username"] | "";
@@ -313,12 +328,15 @@ void handleSerialCommands() {
             ESP.restart();
         } else {
             Serial.println("{\"status\":\"ERROR\",\"message\":\"Provisioning validation failed\"}");
+            Serial.flush();
         }
     }
     else if (strcmp(cmd, "FACTORY_RESET") == 0) {
         auth.factoryReset();
         Serial.println("{\"status\":\"RESET_OK\",\"message\":\"Credentials cleared\"}");
+        Serial.flush();
         delay(200);
         ESP.restart();
+    }
     }
 }
