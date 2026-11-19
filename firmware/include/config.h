@@ -5,8 +5,8 @@
 // Firmware metadata
 #define FIRMWARE_VERSION "1.2.0"
 #define HARDWARE_TARGET "ESP32-S3-DevKitC-1-N16R8"
-#define USB_HID_MANUFACTURER "HydrogenForge"
-#define USB_HID_PRODUCT "Hydrogen Forge HID Keyboard"
+#define USB_HID_MANUFACTURER "HydroGen"
+#define USB_HID_PRODUCT "HydroGen HID Keyboard"
 #define NVS_NAMESPACE "macro_cfg"
 
 // Hardware Pin Definitions

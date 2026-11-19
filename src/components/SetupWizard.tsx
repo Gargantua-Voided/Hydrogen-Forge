@@ -44,7 +44,7 @@ export const SetupWizard: React.FC<SetupWizardProps> = ({ onComplete, onCancel }
   const [isPinging, setIsPinging] = useState(false);
 
   // Step 3: Device Credentials
-  const [deviceName, setDeviceName] = useState('ESP32-S3 Macro');
+  const [deviceName, setDeviceName] = useState('HydroGen');
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);

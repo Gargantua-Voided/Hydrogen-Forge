@@ -105,7 +105,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
           </div>
           <div className="min-w-0">
             <div className="flex items-center gap-2 text-sm font-semibold text-slate-900">
-              <span className="truncate">{activeDevice ? activeDevice.name : 'ESP32-S3 Controller'}</span>
+              <span className="truncate">{activeDevice ? activeDevice.name : 'HydroGen'}</span>
               {activeDevice && (
                 <span className="text-[11px] font-mono font-medium px-1.5 py-0.5 rounded-md bg-slate-100 text-slate-500">
                   v{activeDevice.firmware_version}
@@ -283,7 +283,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
           placeholder={
             connectionState === 'authenticated'
               ? 'Type text directly to target PC via USB HID...'
-              : 'Connect & unlock ESP32-S3 to type text remotely...'
+              : 'Connect & unlock HydroGen to type text remotely...'
           }
           className="flex-1 text-xs text-slate-900 placeholder:text-slate-400 focus:outline-none bg-transparent disabled:cursor-not-allowed"
         />

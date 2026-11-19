@@ -134,7 +134,7 @@ class BleConnectionService {
       const challengeJson = JSON.parse(dec.decode(rawChallengeVal));
 
       if (challengeJson.status !== 'OK' || !challengeJson.challenge) {
-        throw new Error('Failed to obtain challenge from ESP32-S3.');
+        throw new Error('Failed to obtain challenge from HydroGen.');
       }
 
       const timestamp = Date.now();
@@ -194,7 +194,7 @@ class BleConnectionService {
     if (this.state !== 'authenticated' || !this.commandCharacteristic) {
       return {
         success: false,
-        message: 'Connect and authenticate an ESP32-S3 via BLE first.',
+        message: 'Connect and authenticate a HydroGen device via BLE first.',
         durationMs: 0,
       };
     }

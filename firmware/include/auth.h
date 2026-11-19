@@ -29,12 +29,12 @@ public:
         prefs.begin(NVS_NAMESPACE, true);
         isProvisioned = prefs.getBool("provisioned", false);
         if (isProvisioned) {
-            deviceName = prefs.getString("dev_name", "ESP32S3-Macro");
+            deviceName = prefs.getString("dev_name", "HydroGen");
             username = prefs.getString("username", "admin");
             passwordSalt = prefs.getString("salt", "");
             passwordVerifier = prefs.getString("verifier", "");
         } else {
-            deviceName = "ESP32S3-Macro-Unconfigured";
+            deviceName = "HydroGen-Unconfigured";
         }
         prefs.end();
         return isProvisioned;
@@ -69,7 +69,7 @@ public:
         prefs.end();
         isProvisioned = false;
         isSessionActive = false;
-        deviceName = "ESP32S3-Macro-Unconfigured";
+        deviceName = "HydroGen-Unconfigured";
         username = "";
         passwordSalt = "";
         passwordVerifier = "";

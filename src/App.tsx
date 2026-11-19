@@ -114,7 +114,7 @@ export default function App() {
   const handleRunShortcut = async (shortcut: Shortcut) => {
     setStatusError(null);
     if (connectionState !== 'authenticated') {
-      setStatusError('Connect and authenticate your ESP32-S3 via BLE before running macros.');
+      setStatusError('Connect and authenticate your HydroGen via BLE before running macros.');
       return;
     }
 

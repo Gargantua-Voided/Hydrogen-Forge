@@ -191,7 +191,7 @@ void setup() {
     setupBleServer();
 
     Serial.println("\n====================================");
-    Serial.println("ESP32-S3-DevKitC-1-N16R8 Macro Controller");
+    Serial.println("HydroGen Macro Controller");
     Serial.printf("Firmware: %s\n", FIRMWARE_VERSION);
     Serial.printf("UART Port: Provisioning & Debug Ready\n");
     Serial.printf("USB OTG Port: Standard USB HID Keyboard\n");
