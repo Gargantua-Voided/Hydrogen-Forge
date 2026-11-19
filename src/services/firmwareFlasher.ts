@@ -155,9 +155,11 @@ class FirmwareFlasherService {
 
       await esploader.writeFlash({
         fileArray: images.map((img) => ({ data: img.data, address: img.address })),
-        flashMode: 'qio',
-        flashFreq: '80m',
-        flashSize: '16MB',
+        // Preserve compiled image headers & SHA-256 digests ('keep' avoids esptool-js
+        // mutating bootloader.bin from DIO->QIO without recalculating its SHA-256)
+        flashMode: 'keep',
+        flashFreq: 'keep',
+        flashSize: 'keep',
         eraseAll,
         compress: true,
         reportProgress: (fileIndex, written, total) => {

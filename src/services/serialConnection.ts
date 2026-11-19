@@ -158,7 +158,7 @@ class SerialProvisioningService {
             ? ` UART output: "${recentLines.slice(-3).join(' | ')}"`
             : ' Check that you selected the USB-to-UART COM port (not Native USB OTG) and firmware flashed cleanly.';
           reject(new Error(`ESP32-S3 UART response timed out.${hint}`));
-        }, 8000);
+        }, 10000);
       });
 
       return await Promise.race([readPromise, timeoutPromise]);

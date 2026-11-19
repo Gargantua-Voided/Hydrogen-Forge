@@ -55,6 +55,7 @@ export const SetupWizard: React.FC<SetupWizardProps> = ({ onComplete, onCancel }
   const [customFirmwareFile, setCustomFirmwareFile] = useState<File | null>(null);
   const [customBootloaderFile, setCustomBootloaderFile] = useState<File | null>(null);
   const [customPartitionsFile, setCustomPartitionsFile] = useState<File | null>(null);
+  const [eraseAll, setEraseAll] = useState(false);
   const [isFlashing, setIsFlashing] = useState(false);
   const [flashProgress, setFlashProgress] = useState<FlashProgress>({
     stage: 'idle',
@@ -124,7 +125,7 @@ export const SetupWizard: React.FC<SetupWizardProps> = ({ onComplete, onCancel }
         throw new Error('Select a compiled firmware.bin file to flash.');
       }
 
-      const res = await firmwareFlasher.flashBinaries(images, 921600, false, (p) => {
+      const res = await firmwareFlasher.flashBinaries(images, 921600, eraseAll, (p) => {
         setFlashProgress(p);
         if (p.logMessage) {
           setFlashLogs((prev) => [...prev.slice(-20), p.logMessage!]);
@@ -518,6 +519,16 @@ export const SetupWizard: React.FC<SetupWizardProps> = ({ onComplete, onCancel }
                   </label>
                 </div>
               )}
+
+              <label className="flex items-center gap-2 pt-1 text-slate-700 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={eraseAll}
+                  onChange={(e) => setEraseAll(e.target.checked)}
+                  className="rounded border-slate-300 text-blue-600"
+                />
+                <span>Erase all flash before writing (clears stale partitions/NVS)</span>
+              </label>
             </div>
 
             <div className="space-y-2">
