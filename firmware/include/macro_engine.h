@@ -150,7 +150,7 @@ private:
                 continue;
             }
 
-            KeyReport rep = mapCharToHid(codepoint, currentLayout);
+            HidKeyMapping rep = mapCharToHid(codepoint, currentLayout);
             if (rep.scancode != 0) {
                 // Apply modifiers
                 if (rep.modifiers & KEY_MOD_LSHIFT) Keyboard.pressRaw(0xE1);

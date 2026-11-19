@@ -96,14 +96,14 @@ enum KeyboardLayout {
 // Non-US / German specific HID keycodes
 #define HID_KEY_NONUS_BACKSLASH 0x64 // < > | key on ISO German keyboard
 
-struct KeyReport {
+struct HidKeyMapping {
     uint8_t modifiers;
     uint8_t scancode;
 };
 
 // Translates a UTF-8 character or ASCII byte into HID report according to layout
-inline KeyReport mapCharToHid(uint32_t codepoint, KeyboardLayout layout) {
-    KeyReport rep = {KEY_MOD_NONE, 0};
+inline HidKeyMapping mapCharToHid(uint32_t codepoint, KeyboardLayout layout) {
+    HidKeyMapping rep = {KEY_MOD_NONE, 0};
 
     if (layout == LAYOUT_US) {
         // Standard US Layout
