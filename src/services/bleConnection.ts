@@ -31,8 +31,42 @@ class BleConnectionService {
   private state: ConnectionState = 'disconnected';
   private activeDevice: Device | null = null;
   private sessionToken = '';
+  private isConnecting = false;
   private statusListeners: StatusListener[] = [];
   private connectionListeners: ConnectionListener[] = [];
+
+  private delay(ms: number): Promise<void> {
+    return new Promise((resolve) => setTimeout(resolve, ms));
+  }
+
+  private isGattDisconnectError(err: any): boolean {
+    const msg = String(err?.message || err || '').toLowerCase();
+    const name = String(err?.name || '').toLowerCase();
+    return (
+      name === 'networkerror' ||
+      msg.includes('disconnected') ||
+      msg.includes('gatt server') ||
+      msg.includes('not connected') ||
+      msg.includes('connection')
+    );
+  }
+
+  private handleGattDisconnected = (event: any): void => {
+    if (this.isConnecting) return;
+    if (event?.target && this.device && event.target !== this.device) return;
+    this.cleanupConnection(true);
+  };
+
+  private handleStatusValueChanged = (e: any): void => {
+    if (!e?.target?.value) return;
+    const text = new TextDecoder().decode(e.target.value).replace(/\0+$/, '').trim();
+    try {
+      const parsed: BleStatusMessage = JSON.parse(text);
+      this.notifyStatus(parsed);
+    } catch {
+      // Ignore malformed status frame
+    }
+  };
 
   isBleSupported(): boolean {
     return typeof navigator !== 'undefined' && 'bluetooth' in navigator;
@@ -77,6 +111,98 @@ class BleConnectionService {
     };
   }
 
+  private async establishGattSession(targetBleDevice: any): Promise<void> {
+    if (!targetBleDevice?.gatt) {
+      throw new Error('Selected Bluetooth device does not expose a GATT server.');
+    }
+
+    const maxAttempts = 4;
+    this.isConnecting = true;
+
+    try {
+      let lastError: any = null;
+
+      for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+        try {
+          if (attempt > 1) {
+            if (targetBleDevice.gatt.connected) {
+              try {
+                targetBleDevice.gatt.disconnect();
+              } catch {
+                // Ignore stale disconnect errors
+              }
+            }
+            await this.delay(350 * attempt);
+          }
+
+          const server = await targetBleDevice.gatt.connect();
+          if (!server || !server.connected) {
+            throw new Error(
+              'GATT Server is disconnected. Cannot retrieve services. (Re)connect first with `device.gatt.connect`.'
+            );
+          }
+
+          // Allow ESP32 NimBLE connection parameter / MTU negotiation to settle slightly on retries
+          if (attempt > 1) {
+            await this.delay(150);
+          }
+
+          if (!server.connected) {
+            throw new Error(
+              'GATT Server is disconnected. Cannot retrieve services. (Re)connect first with `device.gatt.connect`.'
+            );
+          }
+
+          const service = await server.getPrimaryService(BLE_SERVICE_UUID);
+          const authChar = await service.getCharacteristic(BLE_CHAR_AUTH_UUID);
+          const commandChar = await service.getCharacteristic(BLE_CHAR_COMMAND_UUID);
+          const statusChar = await service.getCharacteristic(BLE_CHAR_STATUS_UUID);
+
+          statusChar.removeEventListener('characteristicvaluechanged', this.handleStatusValueChanged);
+          statusChar.addEventListener('characteristicvaluechanged', this.handleStatusValueChanged);
+
+          try {
+            await statusChar.startNotifications();
+          } catch (notifErr: any) {
+            if (!server.connected || this.isGattDisconnectError(notifErr)) {
+              throw notifErr;
+            }
+          }
+
+          if (!server.connected) {
+            throw new Error(
+              'GATT Server is disconnected after service discovery.'
+            );
+          }
+
+          this.gattServer = server;
+          this.authCharacteristic = authChar;
+          this.commandCharacteristic = commandChar;
+          this.statusCharacteristic = statusChar;
+          return;
+        } catch (err: any) {
+          lastError = err;
+          const canRetry =
+            attempt < maxAttempts &&
+            (!targetBleDevice.gatt.connected || this.isGattDisconnectError(err));
+          if (!canRetry) {
+            break;
+          }
+        }
+      }
+
+      if (this.isGattDisconnectError(lastError)) {
+        throw new Error(
+          'BLE GATT Server disconnected before services could be retrieved. Ensure HydroGen is powered on, not connected to another host, and forget any stale OS Bluetooth pairing if reflashed.'
+        );
+      }
+
+      throw lastError || new Error('Failed to establish BLE GATT session.');
+    } finally {
+      this.isConnecting = false;
+    }
+  }
+
   async connect(
     targetDevice?: Device
   ): Promise<{ success: boolean; message: string; deviceName?: string; bleDeviceId?: string }> {
@@ -87,48 +213,63 @@ class BleConnectionService {
       };
     }
 
+    if (this.isConnecting) {
+      return {
+        success: false,
+        message: 'Bluetooth connection already in progress.',
+      };
+    }
+
+    // Disconnect any previous session synchronously before requestDevice() to preserve user gesture
+    if (this.gattServer?.connected) {
+      try {
+        this.gattServer.disconnect();
+      } catch {
+        // Ignore
+      }
+    }
+    this.cleanupConnection(false);
+
     this.activeDevice = targetDevice || null;
     this.setState('connecting');
 
     try {
-      this.device = await (navigator as any).bluetooth.requestDevice({
+      const selectedDevice = await (navigator as any).bluetooth.requestDevice({
         filters: [{ services: [BLE_SERVICE_UUID] }],
         optionalServices: [BLE_SERVICE_UUID],
       });
 
-      this.device.addEventListener('gattserverdisconnected', () => {
-        this.cleanupConnection();
-      });
+      this.device = selectedDevice;
+      selectedDevice.removeEventListener('gattserverdisconnected', this.handleGattDisconnected);
+      selectedDevice.addEventListener('gattserverdisconnected', this.handleGattDisconnected);
 
-      this.gattServer = await this.device.gatt.connect();
-      const service = await this.gattServer.getPrimaryService(BLE_SERVICE_UUID);
+      await this.establishGattSession(selectedDevice);
 
-      this.authCharacteristic = await service.getCharacteristic(BLE_CHAR_AUTH_UUID);
-      this.commandCharacteristic = await service.getCharacteristic(BLE_CHAR_COMMAND_UUID);
-      this.statusCharacteristic = await service.getCharacteristic(BLE_CHAR_STATUS_UUID);
-
-      await this.statusCharacteristic.startNotifications();
-      this.statusCharacteristic.addEventListener('characteristicvaluechanged', (e: any) => {
-        const text = new TextDecoder().decode(e.target.value).replace(/\0+$/, '').trim();
-        try {
-          const parsed: BleStatusMessage = JSON.parse(text);
-          this.notifyStatus(parsed);
-        } catch {
-          // Ignore malformed status frame
-        }
-      });
-
-      const resolvedName = this.device.name || targetDevice?.name || 'HydroGen';
+      const resolvedName = selectedDevice.name || targetDevice?.name || 'HydroGen';
       this.setState('connected');
       return {
         success: true,
         message: `Connected to ${resolvedName} via BLE`,
         deviceName: resolvedName,
-        bleDeviceId: this.device.id || undefined,
+        bleDeviceId: selectedDevice.id || undefined,
       };
     } catch (e: any) {
-      this.setState('disconnected');
+      this.cleanupConnection(true);
       return { success: false, message: e?.message || 'Bluetooth connection canceled or failed.' };
+    }
+  }
+
+  private async ensureGattReady(): Promise<void> {
+    if (!this.device) {
+      throw new Error('No Bluetooth device selected. Connect via BLE first.');
+    }
+    if (
+      !this.gattServer?.connected ||
+      !this.authCharacteristic ||
+      !this.commandCharacteristic ||
+      !this.statusCharacteristic
+    ) {
+      await this.establishGattSession(this.device);
     }
   }
 
@@ -172,13 +313,14 @@ class BleConnectionService {
     this.setState('authenticating');
 
     try {
+      await this.ensureGattReady();
       const enc = new TextEncoder();
 
       await this.writeCharacteristic(
         this.authCharacteristic,
         enc.encode(JSON.stringify({ command: 'GET_CHALLENGE' }))
       );
-      await new Promise((r) => setTimeout(r, 150));
+      await this.delay(150);
 
       const rawChallengeVal = await this.authCharacteristic.readValue();
       const challengeJson = this.parseBleJson(rawChallengeVal, 'challenge');
@@ -238,7 +380,11 @@ class BleConnectionService {
         message: authResp.message || 'Authentication rejected.',
       };
     } catch (e: any) {
-      this.setState('connected');
+      if (!this.device?.gatt?.connected && this.isGattDisconnectError(e)) {
+        this.cleanupConnection(true);
+      } else {
+        this.setState('connected');
+      }
       return { success: false, message: e?.message || 'Authentication failed.' };
     }
   }
@@ -251,13 +397,14 @@ class BleConnectionService {
     this.setState('authenticating');
 
     try {
+      await this.ensureGattReady();
       const enc = new TextEncoder();
 
       await this.writeCharacteristic(
         this.authCharacteristic,
         enc.encode(JSON.stringify({ command: 'GET_CHALLENGE' }))
       );
-      await new Promise((r) => setTimeout(r, 150));
+      await this.delay(150);
 
       const rawChallengeVal = await this.authCharacteristic.readValue();
       const challengeJson = this.parseBleJson(rawChallengeVal, 'challenge');
@@ -302,7 +449,11 @@ class BleConnectionService {
         message: authResp.message || 'Authentication rejected.',
       };
     } catch (e: any) {
-      this.setState('connected');
+      if (!this.device?.gatt?.connected && this.isGattDisconnectError(e)) {
+        this.cleanupConnection(true);
+      } else {
+        this.setState('connected');
+      }
       return { success: false, message: e?.message || 'Authentication failed.' };
     }
   }
@@ -423,18 +574,37 @@ class BleConnectionService {
         // Ignore
       }
     }
-    this.cleanupConnection();
+    this.cleanupConnection(true);
   }
 
-  private cleanupConnection(): void {
+  private cleanupConnection(notify = true): void {
+    if (this.statusCharacteristic) {
+      try {
+        this.statusCharacteristic.removeEventListener(
+          'characteristicvaluechanged',
+          this.handleStatusValueChanged
+        );
+      } catch {
+        // Ignore
+      }
+    }
+    if (this.device) {
+      try {
+        this.device.removeEventListener('gattserverdisconnected', this.handleGattDisconnected);
+      } catch {
+        // Ignore
+      }
+    }
     this.device = null;
     this.gattServer = null;
     this.authCharacteristic = null;
     this.commandCharacteristic = null;
     this.statusCharacteristic = null;
     this.sessionToken = '';
-    this.setState('disconnected');
-    this.notifyStatus({ status: 'IDLE', details: 'Disconnected' });
+    if (notify) {
+      this.setState('disconnected');
+      this.notifyStatus({ status: 'IDLE', details: 'Disconnected' });
+    }
   }
 
   private actionTypeToInt(type: string): number {

@@ -168,7 +168,8 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
             <button
               type="button"
               onClick={onConnectClick}
-              className={`h-9 inline-flex items-center justify-center gap-2 px-4 rounded-lg text-xs font-semibold transition-colors whitespace-nowrap ${
+              disabled={connectionState === 'connecting' || connectionState === 'authenticating'}
+              className={`h-9 inline-flex items-center justify-center gap-2 px-4 rounded-lg text-xs font-semibold transition-colors whitespace-nowrap disabled:opacity-60 ${
                 connectionState === 'authenticated'
                   ? 'bg-rose-50 text-rose-600 border border-rose-200 hover:bg-rose-100'
                   : connectionState === 'connected'
@@ -185,6 +186,11 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                 <>
                   <Lock className="w-3.5 h-3.5" />
                   <span>Unlock</span>
+                </>
+              ) : connectionState === 'connecting' ? (
+                <>
+                  <Bluetooth className="w-3.5 h-3.5 animate-pulse" />
+                  <span>Connecting...</span>
                 </>
               ) : (
                 <>

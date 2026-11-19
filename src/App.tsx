@@ -88,6 +88,10 @@ export default function App() {
   const handleConnectDevice = async (targetDev?: Device, forceBlePicker = false) => {
     setStatusError(null);
 
+    if (connectionState === 'connecting' || connectionState === 'authenticating') {
+      return;
+    }
+
     if (!forceBlePicker && connectionState === 'authenticated') {
       bleConnection.disconnect();
       setConnectionState('disconnected');

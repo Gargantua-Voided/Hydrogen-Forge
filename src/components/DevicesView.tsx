@@ -219,10 +219,11 @@ export const DevicesView: React.FC<DevicesViewProps> = ({
                     <button
                       type="button"
                       onClick={() => onConnect(device)}
-                      className="h-9 inline-flex items-center justify-center gap-1.5 px-3.5 bg-blue-600 hover:bg-blue-500 text-white rounded-lg text-xs font-semibold whitespace-nowrap"
+                      disabled={connectionState === 'connecting' || connectionState === 'authenticating'}
+                      className="h-9 inline-flex items-center justify-center gap-1.5 px-3.5 bg-blue-600 hover:bg-blue-500 text-white rounded-lg text-xs font-semibold whitespace-nowrap disabled:opacity-60"
                     >
                       <Bluetooth className="w-3.5 h-3.5" />
-                      <span>Connect via Bluetooth</span>
+                      <span>{connectionState === 'connecting' ? 'Connecting...' : 'Connect via Bluetooth'}</span>
                     </button>
                   )}
                 </div>

@@ -33,7 +33,6 @@ class ServerCallbacks: public NimBLEServerCallbacks {
     void onConnect(NimBLEServer* pServer) {
         bleClientConnected = true;
         auth.generateChallenge();
-        sendStatusNotification("CONNECTED", "BLE Client connected, challenge generated");
     }
 
     void onDisconnect(NimBLEServer* pServer) {
@@ -237,6 +236,8 @@ void setupBleServer() {
     NimBLEAdvertising* pAdvertising = NimBLEDevice::getAdvertising();
     pAdvertising->addServiceUUID(BLE_SERVICE_UUID);
     pAdvertising->setScanResponse(true);
+    pAdvertising->setMinPreferred(0x06);
+    pAdvertising->setMaxPreferred(0x12);
     pAdvertising->start();
 }
 
