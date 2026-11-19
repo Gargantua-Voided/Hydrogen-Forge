@@ -93,7 +93,7 @@ public:
     }
 
     // Verify HMAC response: HMAC_SHA256(verifier, challenge + ":" + timestamp + ":" + nonce)
-    bool verifyChallengeResponse(const String& user, const String& responseHmac, unsigned long timestamp, const String& nonce) {
+    bool verifyChallengeResponse(const String& user, const String& responseHmac, uint64_t timestamp, const String& nonce) {
         // Check rate limiting lockout
         if (millis() < lockoutUntil) {
             return false;
@@ -104,7 +104,9 @@ public:
             return false;
         }
 
-        String payload = currentChallenge + ":" + String(timestamp) + ":" + nonce;
+        char tsBuf[24];
+        snprintf(tsBuf, sizeof(tsBuf), "%llu", (unsigned long long)timestamp);
+        String payload = currentChallenge + ":" + String(tsBuf) + ":" + nonce;
         String expectedHmac = computeHmacSha256(passwordVerifier, payload);
 
         if (expectedHmac.equalsIgnoreCase(responseHmac)) {

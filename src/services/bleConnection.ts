@@ -99,7 +99,7 @@ class BleConnectionService {
 
       await this.statusCharacteristic.startNotifications();
       this.statusCharacteristic.addEventListener('characteristicvaluechanged', (e: any) => {
-        const text = new TextDecoder().decode(e.target.value);
+        const text = new TextDecoder().decode(e.target.value).replace(/\0+$/, '').trim();
         try {
           const parsed: BleStatusMessage = JSON.parse(text);
           this.notifyStatus(parsed);
@@ -116,6 +116,28 @@ class BleConnectionService {
     }
   }
 
+  private async writeCharacteristic(characteristic: any, data: BufferSource): Promise<void> {
+    if (typeof characteristic.writeValueWithResponse === 'function') {
+      await characteristic.writeValueWithResponse(data);
+    } else {
+      await characteristic.writeValue(data);
+    }
+  }
+
+  private parseBleJson(rawValue: DataView, stepLabel: string): any {
+    const text = new TextDecoder().decode(rawValue).replace(/\0+$/, '').trim();
+    try {
+      return JSON.parse(text);
+    } catch {
+      const hex = Array.from(new Uint8Array(rawValue.buffer, rawValue.byteOffset, rawValue.byteLength))
+        .map((b) => b.toString(16).padStart(2, '0'))
+        .join(' ');
+      throw new Error(
+        `Invalid BLE ${stepLabel} response ("${text.slice(0, 32)}" [${hex}]). Reflash the latest HydroGen firmware.`
+      );
+    }
+  }
+
   async authenticate(passwordVerifierHex: string): Promise<{ success: boolean; message: string }> {
     if (this.state !== 'connected' && this.state !== 'authenticating') {
       return { success: false, message: 'Device not connected.' };
@@ -125,19 +147,21 @@ class BleConnectionService {
 
     try {
       const enc = new TextEncoder();
-      const dec = new TextDecoder();
 
-      await this.authCharacteristic.writeValue(enc.encode(JSON.stringify({ command: 'GET_CHALLENGE' })));
+      await this.writeCharacteristic(
+        this.authCharacteristic,
+        enc.encode(JSON.stringify({ command: 'GET_CHALLENGE' }))
+      );
       await new Promise((r) => setTimeout(r, 150));
 
       const rawChallengeVal = await this.authCharacteristic.readValue();
-      const challengeJson = JSON.parse(dec.decode(rawChallengeVal));
+      const challengeJson = this.parseBleJson(rawChallengeVal, 'challenge');
 
       if (challengeJson.status !== 'OK' || !challengeJson.challenge) {
-        throw new Error('Failed to obtain challenge from HydroGen.');
+        throw new Error(challengeJson.message || 'Failed to obtain challenge from HydroGen.');
       }
 
-      const timestamp = Date.now();
+      const timestamp = Math.floor(Date.now() / 1000);
       const nonce = getRandomHex(16);
       const hmacHex = await computeChallengeHmac(
         passwordVerifierHex,
@@ -154,11 +178,11 @@ class BleConnectionService {
         nonce,
       };
 
-      await this.authCharacteristic.writeValue(enc.encode(JSON.stringify(authCmd)));
+      await this.writeCharacteristic(this.authCharacteristic, enc.encode(JSON.stringify(authCmd)));
       await new Promise((r) => setTimeout(r, 200));
 
       const authRespRaw = await this.authCharacteristic.readValue();
-      const authResp = JSON.parse(dec.decode(authRespRaw));
+      const authResp = this.parseBleJson(authRespRaw, 'auth');
 
       if (authResp.status === 'AUTHENTICATED' && authResp.token) {
         this.sessionToken = authResp.token;
@@ -240,7 +264,7 @@ class BleConnectionService {
       };
 
       const enc = new TextEncoder();
-      await this.commandCharacteristic.writeValue(enc.encode(JSON.stringify(payload)));
+      await this.writeCharacteristic(this.commandCharacteristic, enc.encode(JSON.stringify(payload)));
 
       const durationMs = Date.now() - startTime;
       return { success: true, message: 'Macro transmitted over BLE GATT.', durationMs };
@@ -258,7 +282,10 @@ class BleConnectionService {
     if (this.commandCharacteristic && this.state === 'authenticated') {
       try {
         const payload = { action: 'CANCEL', token: this.sessionToken };
-        await this.commandCharacteristic.writeValue(new TextEncoder().encode(JSON.stringify(payload)));
+        await this.writeCharacteristic(
+          this.commandCharacteristic,
+          new TextEncoder().encode(JSON.stringify(payload))
+        );
       } catch {
         // Ignore cancel write failure
       }
@@ -273,7 +300,10 @@ class BleConnectionService {
     if (this.commandCharacteristic && this.state === 'authenticated') {
       try {
         const payload = { action: 'SET_LAYOUT', token: this.sessionToken, layout };
-        await this.commandCharacteristic.writeValue(new TextEncoder().encode(JSON.stringify(payload)));
+        await this.writeCharacteristic(
+          this.commandCharacteristic,
+          new TextEncoder().encode(JSON.stringify(payload))
+        );
       } catch {
         // Ignore layout write failure
       }

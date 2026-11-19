@@ -51,7 +51,8 @@ class AuthCallbacks: public NimBLECharacteristicCallbacks {
         JsonDocument doc;
         DeserializationError err = deserializeJson(doc, rxVal);
         if (err) {
-            pCharacteristic->setValue("{\"status\":\"ERROR\",\"message\":\"Malformed JSON\"}");
+            static const char errJson[] = "{\"status\":\"ERROR\",\"message\":\"Malformed JSON\"}";
+            pCharacteristic->setValue((const uint8_t*)errJson, sizeof(errJson) - 1);
             pCharacteristic->notify();
             return;
         }
@@ -66,13 +67,13 @@ class AuthCallbacks: public NimBLECharacteristicCallbacks {
             resp["salt"] = auth.passwordSalt;
             String respStr;
             serializeJson(resp, respStr);
-            pCharacteristic->setValue(respStr.c_str());
+            pCharacteristic->setValue((const uint8_t*)respStr.c_str(), respStr.length());
             pCharacteristic->notify();
         } 
         else if (strcmp(cmd, "AUTH") == 0) {
             const char* user = doc["username"] | "";
             const char* hmac = doc["hmac"] | "";
-            unsigned long ts = doc["timestamp"] | 0;
+            uint64_t ts = doc["timestamp"] | (uint64_t)0;
             const char* nonce = doc["nonce"] | "";
 
             bool success = auth.verifyChallengeResponse(user, hmac, ts, nonce);
@@ -88,7 +89,7 @@ class AuthCallbacks: public NimBLECharacteristicCallbacks {
             }
             String respStr;
             serializeJson(resp, respStr);
-            pCharacteristic->setValue(respStr.c_str());
+            pCharacteristic->setValue((const uint8_t*)respStr.c_str(), respStr.length());
             pCharacteristic->notify();
         }
     }
@@ -165,7 +166,7 @@ void sendStatusNotification(const String& status, const String& details) {
         doc["timestamp"] = millis();
         String json;
         serializeJson(doc, json);
-        pStatusChar->setValue(json.c_str());
+        pStatusChar->setValue((const uint8_t*)json.c_str(), json.length());
         pStatusChar->notify();
     }
 }
@@ -205,6 +206,7 @@ void setup() {
 
 void setupBleServer() {
     NimBLEDevice::init(auth.deviceName.c_str());
+    NimBLEDevice::setMTU(512);
     NimBLEDevice::setPower(ESP_PWR_LVL_P9); // Max TX power
     NimBLEDevice::setSecurityAuth(false, false, false); // Application-level HMAC auth used
 
