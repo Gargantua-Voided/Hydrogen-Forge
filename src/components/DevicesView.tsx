@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import {
   Plus,
+  Cpu,
   Bluetooth,
   BluetoothOff,
   Trash2,
@@ -112,11 +113,15 @@ export const DevicesView: React.FC<DevicesViewProps> = ({
                 <div>
                   <div className="flex items-start justify-between">
                     <div className="flex items-center gap-3">
-                      <img
-                        src={`${import.meta.env.BASE_URL}logo.png`}
-                        alt="Hydrogen Forge"
-                        className="w-9 h-9 object-contain shrink-0"
-                      />
+                      <div
+                        className={`relative w-10 h-10 rounded-xl border flex items-center justify-center shrink-0 ${
+                          isActive && connectionState === 'authenticated'
+                            ? 'bg-emerald-50 border-emerald-200 text-emerald-600'
+                            : 'bg-blue-50 border-blue-200 text-blue-600'
+                        }`}
+                      >
+                        <Cpu className="w-5 h-5" />
+                      </div>
                       <div>
                         <h4 className="text-sm font-semibold text-slate-900">{device.name}</h4>
                         <div className="flex items-center gap-1.5 text-xs text-slate-500 mt-0.5">
