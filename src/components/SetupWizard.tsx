@@ -159,8 +159,10 @@ export const SetupWizard: React.FC<SetupWizardProps> = ({ onComplete, onCancel }
         masterKey
       );
 
+      const finalDeviceName = deviceName.trim() || 'HydroGen';
+
       const res = await serialProvisioning.provisionDevice({
-        deviceName,
+        deviceName: finalDeviceName,
         username,
         saltHex,
         verifierHex,
@@ -170,7 +172,7 @@ export const SetupWizard: React.FC<SetupWizardProps> = ({ onComplete, onCancel }
       if (res.success) {
         const newDevice: Device = {
           id: `dev_${Date.now()}`,
-          name: deviceName,
+          name: res.deviceName || finalDeviceName,
           username,
           encrypted_credentials: encryptedCreds,
           salt: saltHex,
@@ -440,7 +442,7 @@ export const SetupWizard: React.FC<SetupWizardProps> = ({ onComplete, onCancel }
               <button
                 type="button"
                 onClick={() => setCurrentStep(4)}
-                disabled={!deviceName || !username || passwordStrength.score < 40}
+                disabled={!deviceName.trim() || !username || passwordStrength.score < 40}
                 className="inline-flex items-center gap-1.5 px-4 py-2 text-xs font-semibold text-white bg-blue-600 hover:bg-blue-500 rounded-lg disabled:opacity-40"
               >
                 <span>Next</span>
@@ -629,11 +631,30 @@ export const SetupWizard: React.FC<SetupWizardProps> = ({ onComplete, onCancel }
               </div>
             </div>
 
-            <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-200 text-xs grid grid-cols-2 gap-2">
-              <div>Device: <strong className="text-slate-900">{deviceName}</strong></div>
-              <div>User: <strong className="text-slate-900">{username}</strong></div>
-              <div>Layout: <strong className="text-slate-900">{layout}</strong></div>
-              <div>Storage: <strong className="text-slate-900">ESP32 NVS</strong></div>
+            <div className="space-y-3 text-xs">
+              <div>
+                <label htmlFor="provision-device-name" className="block font-medium text-slate-700 mb-1">
+                  Device Name
+                </label>
+                <input
+                  id="provision-device-name"
+                  type="text"
+                  value={deviceName}
+                  onChange={(e) => setDeviceName(e.target.value)}
+                  placeholder="HydroGen"
+                  disabled={isProvisioning}
+                  className="w-full px-3 py-2 rounded-lg border border-slate-200 bg-white text-slate-900 disabled:opacity-60"
+                />
+                <p className="mt-1 text-[11px] text-slate-500">
+                  Used as the Bluetooth (BLE) broadcast name and device label.
+                </p>
+              </div>
+
+              <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-200 grid grid-cols-1 sm:grid-cols-3 gap-2">
+                <div>User: <strong className="text-slate-900">{username}</strong></div>
+                <div>Layout: <strong className="text-slate-900">{layout}</strong></div>
+                <div>Storage: <strong className="text-slate-900">ESP32 NVS</strong></div>
+              </div>
             </div>
 
             {provisionError && <p className="text-xs text-rose-600">{provisionError}</p>}
@@ -641,7 +662,7 @@ export const SetupWizard: React.FC<SetupWizardProps> = ({ onComplete, onCancel }
             <button
               type="button"
               onClick={handleStartProvisioning}
-              disabled={isProvisioning}
+              disabled={isProvisioning || !deviceName.trim()}
               className="w-full inline-flex items-center justify-center gap-2 px-4 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-semibold disabled:opacity-50"
             >
               {isProvisioning ? (
