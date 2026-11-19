@@ -1,0 +1,36 @@
+{
+  "latest_version": "1.2.0",
+  "releases": [
+    {
+      "version": "1.2.0",
+      "release_date": "2026-11-19",
+      "target_chip": "ESP32-S3-DevKitC-1-N16R8",
+      "min_app_version": "1.0.0",
+      "title": "v1.2.0 — ESP32-S3-DevKitC-1-N16R8 (16MB QIO)",
+      "notes": [
+        "USB-to-UART flash/provision + Native USB OTG HID Keyboard",
+        "German QWERTZ & US layouts"
+      ],
+      "files": [
+        {
+          "name": "bootloader.bin",
+          "offset": "0x0",
+          "size": 15104,
+          "url": "firmware/v1.2.0/bootloader.bin"
+        },
+        {
+          "name": "partitions.bin",
+          "offset": "0x8000",
+          "size": 3072,
+          "url": "firmware/v1.2.0/partitions.bin"
+        },
+        {
+          "name": "firmware.bin",
+          "offset": "0x10000",
+          "size": 605536,
+          "url": "firmware/v1.2.0/firmware.bin"
+        }
+      ]
+    }
+  ]
+}
