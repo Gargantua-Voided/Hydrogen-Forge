@@ -4,7 +4,7 @@ import {
   KeyboardLayoutId,
   ShortcutAction,
 } from '../types';
-import { computeChallengeHmac, getRandomHex } from './crypto';
+import { computeChallengeHmac, computePasswordVerifier, getRandomHex } from './crypto';
 import { HID_KEY_CODES } from './keyboardLayouts';
 
 export interface BleStatusMessage {
@@ -69,7 +69,17 @@ class BleConnectionService {
     this.statusListeners.forEach((l) => l(msg));
   }
 
-  async connect(targetDevice: Device): Promise<{ success: boolean; message: string }> {
+  getConnectedBleInfo(): { name: string; id: string } | null {
+    if (!this.device) return null;
+    return {
+      name: this.device.name || 'HydroGen',
+      id: this.device.id || '',
+    };
+  }
+
+  async connect(
+    targetDevice?: Device
+  ): Promise<{ success: boolean; message: string; deviceName?: string; bleDeviceId?: string }> {
     if (!this.isBleSupported()) {
       return {
         success: false,
@@ -77,7 +87,7 @@ class BleConnectionService {
       };
     }
 
-    this.activeDevice = targetDevice;
+    this.activeDevice = targetDevice || null;
     this.setState('connecting');
 
     try {
@@ -108,8 +118,14 @@ class BleConnectionService {
         }
       });
 
+      const resolvedName = this.device.name || targetDevice?.name || 'HydroGen';
       this.setState('connected');
-      return { success: true, message: `Connected to ${this.device.name || targetDevice.name} via BLE` };
+      return {
+        success: true,
+        message: `Connected to ${resolvedName} via BLE`,
+        deviceName: resolvedName,
+        bleDeviceId: this.device.id || undefined,
+      };
     } catch (e: any) {
       this.setState('disconnected');
       return { success: false, message: e?.message || 'Bluetooth connection canceled or failed.' };
@@ -135,6 +151,95 @@ class BleConnectionService {
       throw new Error(
         `Invalid BLE ${stepLabel} response ("${text.slice(0, 32)}" [${hex}]). Reflash the latest HydroGen firmware.`
       );
+    }
+  }
+
+  async authenticateWithPassword(
+    username: string,
+    password: string,
+    fallbackSalt?: string
+  ): Promise<{
+    success: boolean;
+    message: string;
+    deviceName?: string;
+    firmwareVersion?: string;
+    salt?: string;
+  }> {
+    if (this.state !== 'connected' && this.state !== 'authenticating') {
+      return { success: false, message: 'Device not connected.' };
+    }
+
+    this.setState('authenticating');
+
+    try {
+      const enc = new TextEncoder();
+
+      await this.writeCharacteristic(
+        this.authCharacteristic,
+        enc.encode(JSON.stringify({ command: 'GET_CHALLENGE' }))
+      );
+      await new Promise((r) => setTimeout(r, 150));
+
+      const rawChallengeVal = await this.authCharacteristic.readValue();
+      const challengeJson = this.parseBleJson(rawChallengeVal, 'challenge');
+
+      if (challengeJson.status !== 'OK' || !challengeJson.challenge) {
+        throw new Error(challengeJson.message || 'Failed to obtain challenge from HydroGen.');
+      }
+
+      const effectiveSalt = challengeJson.salt || fallbackSalt || '';
+      if (!effectiveSalt) {
+        throw new Error(
+          'Device did not provide a credential salt. Provision this device over USB-to-UART first.'
+        );
+      }
+
+      const passwordVerifierHex = await computePasswordVerifier(password, effectiveSalt);
+
+      const timestamp = Math.floor(Date.now() / 1000);
+      const nonce = getRandomHex(16);
+      const hmacHex = await computeChallengeHmac(
+        passwordVerifierHex,
+        challengeJson.challenge,
+        timestamp,
+        nonce
+      );
+
+      const authCmd = {
+        command: 'AUTH',
+        username: username.trim() || 'admin',
+        hmac: hmacHex,
+        timestamp,
+        nonce,
+      };
+
+      await this.writeCharacteristic(this.authCharacteristic, enc.encode(JSON.stringify(authCmd)));
+      await new Promise((r) => setTimeout(r, 200));
+
+      const authRespRaw = await this.authCharacteristic.readValue();
+      const authResp = this.parseBleJson(authRespRaw, 'auth');
+
+      if (authResp.status === 'AUTHENTICATED' && authResp.token) {
+        this.sessionToken = authResp.token;
+        this.setState('authenticated');
+        this.notifyStatus({ status: 'IDLE', details: 'Authenticated' });
+        return {
+          success: true,
+          message: 'Authenticated via HMAC-SHA256.',
+          deviceName: authResp.device_name || this.device?.name || 'HydroGen',
+          firmwareVersion: authResp.firmware || '1.2.0',
+          salt: effectiveSalt,
+        };
+      }
+
+      this.setState('connected');
+      return {
+        success: false,
+        message: authResp.message || 'Authentication rejected.',
+      };
+    } catch (e: any) {
+      this.setState('connected');
+      return { success: false, message: e?.message || 'Authentication failed.' };
     }
   }
 

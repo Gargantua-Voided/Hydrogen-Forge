@@ -17,6 +17,7 @@ interface DevicesViewProps {
   connectionState: ConnectionState;
   connectionMode: ConnectionMode;
   onConnect: (device: Device) => void;
+  onConnectNewBle: () => void;
   onDisconnect: () => void;
   onRefreshDevices: () => void;
   onOpenSetupWizard: () => void;
@@ -28,6 +29,7 @@ export const DevicesView: React.FC<DevicesViewProps> = ({
   activeDevice,
   connectionState,
   onConnect,
+  onConnectNewBle,
   onDisconnect,
   onRefreshDevices,
   onOpenSetupWizard,
@@ -62,42 +64,81 @@ export const DevicesView: React.FC<DevicesViewProps> = ({
       <div className="flex flex-wrap items-center justify-between gap-3">
         <h2 className="text-lg font-bold text-slate-900 tracking-tight">Devices</h2>
 
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
+          <button
+            type="button"
+            onClick={onConnectNewBle}
+            className="h-9 inline-flex items-center justify-center gap-2 px-4 text-xs font-semibold text-white bg-blue-600 hover:bg-blue-500 rounded-lg transition-colors whitespace-nowrap"
+          >
+            <Bluetooth className="w-3.5 h-3.5" />
+            <span>Connect via Bluetooth</span>
+          </button>
+
           <button
             type="button"
             onClick={() => onOpenFlasher(undefined)}
-            className="inline-flex items-center gap-1.5 px-3.5 py-2 text-xs font-medium text-slate-700 bg-white border border-slate-200 hover:bg-slate-50 rounded-xl transition-colors"
+            className="h-9 inline-flex items-center justify-center gap-2 px-4 text-xs font-semibold text-slate-700 bg-white border border-slate-200 hover:bg-slate-50 rounded-lg transition-colors whitespace-nowrap"
           >
-            <Download className="w-3.5 h-3.5" />
+            <Download className="w-3.5 h-3.5 text-slate-500" />
             <span>Flash Firmware</span>
           </button>
 
           <button
             type="button"
             onClick={onOpenSetupWizard}
-            className="inline-flex items-center gap-1.5 px-3.5 py-2 text-xs font-semibold text-white bg-blue-600 hover:bg-blue-500 rounded-xl transition-colors"
+            className="h-9 inline-flex items-center justify-center gap-2 px-4 text-xs font-semibold text-slate-700 bg-white border border-slate-200 hover:bg-slate-50 rounded-lg transition-colors whitespace-nowrap"
           >
-            <Plus className="w-4 h-4" />
-            <span>Add Device</span>
+            <Plus className="w-3.5 h-3.5 text-slate-500" />
+            <span>Prepare New Board</span>
           </button>
         </div>
       </div>
 
       {devices.length === 0 ? (
-        <div className="p-12 text-center border border-dashed border-slate-300 bg-white rounded-2xl text-slate-500 text-xs space-y-3">
-          <img
-            src={`${import.meta.env.BASE_URL}logo.png`}
-            alt="Hydrogen Forge"
-            className="w-12 h-12 mx-auto object-contain opacity-85"
-          />
-          <p className="font-semibold text-slate-700">No devices configured</p>
-          <button
-            type="button"
-            onClick={onOpenSetupWizard}
-            className="inline-flex items-center gap-1.5 px-4 py-2 text-xs font-semibold text-white bg-blue-600 hover:bg-blue-500 rounded-lg transition-colors"
-          >
-            Start Setup Wizard
-          </button>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-xs flex flex-col justify-between gap-4">
+            <div className="space-y-1.5">
+              <div className="flex items-center gap-2 text-sm font-bold text-slate-900">
+                <Bluetooth className="w-4 h-4 text-blue-600" />
+                <span>Use Ready Device</span>
+              </div>
+              <p className="text-xs text-slate-500 leading-relaxed">
+                Already flashed and provisioned your ESP32-S3? Pair wirelessly over Bluetooth to start executing macros.
+              </p>
+            </div>
+            <div>
+              <button
+                type="button"
+                onClick={onConnectNewBle}
+                className="h-9 inline-flex items-center justify-center gap-2 px-4 text-xs font-semibold text-white bg-blue-600 hover:bg-blue-500 rounded-lg transition-colors whitespace-nowrap"
+              >
+                <Bluetooth className="w-3.5 h-3.5" />
+                <span>Connect via Bluetooth</span>
+              </button>
+            </div>
+          </div>
+
+          <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-xs flex flex-col justify-between gap-4">
+            <div className="space-y-1.5">
+              <div className="flex items-center gap-2 text-sm font-bold text-slate-900">
+                <Download className="w-4 h-4 text-slate-600" />
+                <span>Prepare New Device</span>
+              </div>
+              <p className="text-xs text-slate-500 leading-relaxed">
+                First time setting up a board? Flash firmware and write NVS credentials over USB-to-UART.
+              </p>
+            </div>
+            <div>
+              <button
+                type="button"
+                onClick={onOpenSetupWizard}
+                className="h-9 inline-flex items-center justify-center gap-2 px-4 text-xs font-semibold text-slate-700 bg-white border border-slate-200 hover:bg-slate-50 rounded-lg transition-colors whitespace-nowrap"
+              >
+                <Plus className="w-3.5 h-3.5 text-slate-500" />
+                <span>Flash & Setup via USB</span>
+              </button>
+            </div>
+          </div>
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -169,7 +210,7 @@ export const DevicesView: React.FC<DevicesViewProps> = ({
                     <button
                       type="button"
                       onClick={onDisconnect}
-                      className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-rose-50 text-rose-600 hover:bg-rose-100 rounded-lg text-xs font-semibold"
+                      className="h-9 inline-flex items-center justify-center gap-1.5 px-3.5 bg-rose-50 text-rose-600 border border-rose-200 hover:bg-rose-100 rounded-lg text-xs font-semibold whitespace-nowrap"
                     >
                       <BluetoothOff className="w-3.5 h-3.5" />
                       <span>Disconnect</span>
@@ -178,14 +219,10 @@ export const DevicesView: React.FC<DevicesViewProps> = ({
                     <button
                       type="button"
                       onClick={() => onConnect(device)}
-                      className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-blue-600 hover:bg-blue-500 text-white rounded-lg text-xs font-semibold shadow-sm shadow-blue-600/20"
+                      className="h-9 inline-flex items-center justify-center gap-1.5 px-3.5 bg-blue-600 hover:bg-blue-500 text-white rounded-lg text-xs font-semibold whitespace-nowrap"
                     >
-                      <span className="relative flex h-2 w-2">
-                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-white opacity-75" />
-                        <span className="relative inline-flex rounded-full h-2 w-2 bg-white" />
-                      </span>
                       <Bluetooth className="w-3.5 h-3.5" />
-                      <span>Connect BLE</span>
+                      <span>Connect via Bluetooth</span>
                     </button>
                   )}
                 </div>

@@ -1,6 +1,5 @@
 import React from 'react';
 import {
-  Bluetooth,
   BluetoothConnected,
   BluetoothSearching,
   Lock,
@@ -33,11 +32,9 @@ export const Navbar: React.FC<NavbarProps> = ({
     { id: 'settings', label: 'Settings' },
   ];
 
-  const isReadyToConnect = Boolean(activeDevice) && connectionState === 'disconnected';
-
   return (
     <header className="sticky top-0 z-40 w-full border-b border-slate-200/80 bg-white/90 backdrop-blur-md">
-      <div className="max-w-6xl mx-auto px-4 sm:px-6 h-14 flex items-center justify-between md:justify-start gap-5">
+      <div className="max-w-6xl mx-auto px-4 sm:px-6 h-14 flex items-center justify-between gap-8">
         <button
           type="button"
           onClick={() => onTabChange('dashboard')}
@@ -51,9 +48,7 @@ export const Navbar: React.FC<NavbarProps> = ({
           <span>Hydrogen Forge</span>
         </button>
 
-        <div className="hidden md:block h-5 w-px bg-slate-200 shrink-0" aria-hidden="true" />
-
-        <nav className="hidden md:flex items-center gap-5 text-xs font-medium text-slate-500">
+        <nav className="hidden md:flex items-center gap-6 text-xs font-medium text-slate-500">
           {navItems.map((item) => {
             const isActive =
               activeTab === item.id || (item.id === 'devices' && activeTab === 'firmware');
@@ -74,59 +69,37 @@ export const Navbar: React.FC<NavbarProps> = ({
           })}
         </nav>
 
-        <div className="hidden md:block h-5 w-px bg-slate-200 shrink-0" aria-hidden="true" />
-
-        <div className="flex items-center gap-2 shrink-0">
-          <button
-            type="button"
-            onClick={onConnectClick}
-            className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all whitespace-nowrap border shrink-0 ${
-              connectionState === 'authenticated'
-                ? 'bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100'
-                : connectionState === 'connected'
-                ? 'bg-amber-50 text-amber-700 border-amber-300 ring-2 ring-amber-400/25 hover:bg-amber-100'
-                : connectionState === 'connecting' || connectionState === 'authenticating'
-                ? 'bg-blue-50 text-blue-700 border-blue-200'
-                : isReadyToConnect
-                ? 'bg-blue-600 text-white border-blue-600 shadow-sm shadow-blue-600/25 ring-2 ring-blue-500/20 hover:bg-blue-500'
-                : 'bg-slate-100 text-slate-700 border-slate-200 hover:bg-slate-200/70'
-            }`}
-          >
-            {connectionState === 'authenticated' ? (
-              <>
-                <span className="relative flex h-2 w-2">
-                  <span className="h-2 w-2 rounded-full bg-emerald-500" />
-                </span>
-                <BluetoothConnected className="w-3.5 h-3.5 text-emerald-600" />
-                <span>{activeDevice?.name || 'Connected'}</span>
-              </>
-            ) : connectionState === 'connected' ? (
-              <>
-                <span className="relative flex h-2 w-2">
-                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75" />
-                  <span className="relative inline-flex rounded-full h-2 w-2 bg-amber-500" />
-                </span>
-                <Lock className="w-3.5 h-3.5 text-amber-600" />
-                <span>Unlock</span>
-              </>
-            ) : connectionState === 'connecting' || connectionState === 'authenticating' ? (
-              <>
-                <BluetoothSearching className="w-3.5 h-3.5 animate-pulse" />
-                <span>Connecting</span>
-              </>
-            ) : (
-              <>
-                {isReadyToConnect && (
-                  <span className="relative flex h-2 w-2">
-                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-white opacity-75" />
-                    <span className="relative inline-flex rounded-full h-2 w-2 bg-white" />
-                  </span>
-                )}
-                <Bluetooth className="w-3.5 h-3.5" />
-                <span>Connect BLE</span>
-              </>
-            )}
-          </button>
+        <div className="flex items-center gap-2.5 shrink-0">
+          {connectionState !== 'disconnected' && connectionState !== 'error' && (
+            <button
+              type="button"
+              onClick={onConnectClick}
+              className={`h-9 inline-flex items-center gap-2 px-3.5 rounded-lg text-xs font-semibold transition-colors whitespace-nowrap border shrink-0 ${
+                connectionState === 'authenticated'
+                  ? 'bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100'
+                  : connectionState === 'connected'
+                  ? 'bg-amber-50 text-amber-700 border-amber-300 hover:bg-amber-100'
+                  : 'bg-blue-50 text-blue-700 border-blue-200'
+              }`}
+            >
+              {connectionState === 'authenticated' ? (
+                <>
+                  <BluetoothConnected className="w-3.5 h-3.5 text-emerald-600" />
+                  <span>{activeDevice?.name || 'Connected'}</span>
+                </>
+              ) : connectionState === 'connected' ? (
+                <>
+                  <Lock className="w-3.5 h-3.5 text-amber-600" />
+                  <span>Unlock</span>
+                </>
+              ) : (
+                <>
+                  <BluetoothSearching className="w-3.5 h-3.5" />
+                  <span>Connecting...</span>
+                </>
+              )}
+            </button>
+          )}
 
           <PWAInstallButton />
         </div>

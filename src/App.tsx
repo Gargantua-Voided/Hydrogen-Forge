@@ -13,11 +13,12 @@ import { FirmwareView } from './components/FirmwareView';
 import { SettingsView } from './components/SettingsView';
 import { ShortcutEditorModal } from './components/ShortcutEditorModal';
 import { ParameterPromptModal } from './components/ParameterPromptModal';
-import { DeviceUnlockModal } from './components/DeviceUnlockModal';
+import { DeviceUnlockModal, UnlockSuccessInfo } from './components/DeviceUnlockModal';
 import { OfflineIndicator } from './components/OfflineIndicator';
 
 import { db } from './services/db';
 import { bleConnection } from './services/bleConnection';
+import { deriveKeyFromPassword, encryptData, getRandomHex } from './services/crypto';
 import {
   Shortcut,
   ShortcutAction,
@@ -43,6 +44,8 @@ export default function App() {
   const [editingShortcut, setEditingShortcut] = useState<Shortcut | null | undefined>(undefined);
   const [parameterPromptShortcut, setParameterPromptShortcut] = useState<Shortcut | null>(null);
   const [showUnlockModal, setShowUnlockModal] = useState<boolean>(false);
+  const [unlockTargetDevice, setUnlockTargetDevice] = useState<Device | null>(null);
+  const [pendingBleName, setPendingBleName] = useState<string | undefined>(undefined);
 
   useEffect(() => {
     document.documentElement.classList.remove('dark');
@@ -82,33 +85,98 @@ export default function App() {
     bleConnection.updateLayout(layout);
   };
 
-  const handleConnectDevice = async (targetDev?: Device) => {
+  const handleConnectDevice = async (targetDev?: Device, forceBlePicker = false) => {
     setStatusError(null);
 
-    if (connectionState === 'authenticated') {
+    if (!forceBlePicker && connectionState === 'authenticated') {
       bleConnection.disconnect();
       setConnectionState('disconnected');
       return;
     }
 
-    if (connectionState === 'connected') {
-      if (activeDevice) setShowUnlockModal(true);
+    if (!forceBlePicker && connectionState === 'connected') {
+      setUnlockTargetDevice(targetDev || activeDevice || devices[0] || null);
+      setPendingBleName(bleConnection.getConnectedBleInfo()?.name);
+      setShowUnlockModal(true);
       return;
     }
 
-    const dev = targetDev || activeDevice || devices[0];
-    if (!dev) {
-      setActiveTab('setup');
-      return;
+    if (connectionState !== 'disconnected') {
+      bleConnection.disconnect();
     }
 
+    const dev = forceBlePicker ? undefined : targetDev || activeDevice || devices[0];
     const res = await bleConnection.connect(dev);
     if (res.success) {
-      setActiveDevice(dev);
+      if (dev) {
+        setActiveDevice(dev);
+        setUnlockTargetDevice(dev);
+      } else {
+        setUnlockTargetDevice(null);
+      }
+      setPendingBleName(res.deviceName || 'HydroGen');
       setShowUnlockModal(true);
     } else {
       setStatusError(res.message);
     }
+  };
+
+  const handleUnlockSuccess = async (info: UnlockSuccessInfo) => {
+    const now = new Date().toISOString();
+    let encryptedCreds = unlockTargetDevice?.encrypted_credentials || '';
+
+    if (info.salt) {
+      try {
+        const masterKey = await deriveKeyFromPassword(info.password, info.salt, 'encrypt');
+        encryptedCreds = await encryptData(
+          JSON.stringify({ username: info.username, password: info.password, createdAt: now }),
+          masterKey
+        );
+      } catch {
+        // Keep existing encrypted credentials if local encryption fails
+      }
+    }
+
+    const existingDevices = db.getDevices();
+    const matched =
+      unlockTargetDevice ||
+      existingDevices.find(
+        (d) =>
+          (info.salt && d.salt === info.salt && d.username === info.username) ||
+          (d.name === info.deviceName && d.username === info.username)
+      ) ||
+      null;
+
+    const savedDevice: Device = matched
+      ? {
+          ...matched,
+          name: info.deviceName || matched.name,
+          username: info.username,
+          salt: info.salt || matched.salt,
+          encrypted_credentials: encryptedCreds || matched.encrypted_credentials,
+          firmware_version: info.firmwareVersion || matched.firmware_version,
+          last_connected_at: now,
+          updated_at: now,
+        }
+      : {
+          id: `dev_${Date.now()}`,
+          name: info.deviceName || 'HydroGen',
+          username: info.username,
+          encrypted_credentials: encryptedCreds,
+          salt: info.salt,
+          firmware_version: info.firmwareVersion || '1.2.0',
+          device_identifier:
+            bleConnection.getConnectedBleInfo()?.id || getRandomHex(6).toUpperCase(),
+          created_at: now,
+          updated_at: now,
+          last_connected_at: now,
+          preferred_layout: currentLayout,
+        };
+
+    db.saveDevice(savedDevice);
+    setActiveDevice(savedDevice);
+    refreshData();
+    setConnectionState('authenticated');
   };
 
   const handleRunShortcut = async (shortcut: Shortcut) => {
@@ -280,6 +348,7 @@ export default function App() {
             connectionState={connectionState}
             connectionMode="ble"
             onConnect={(dev) => handleConnectDevice(dev)}
+            onConnectNewBle={() => handleConnectDevice(undefined, true)}
             onDisconnect={() => {
               bleConnection.disconnect();
               setConnectionState('disconnected');
@@ -335,10 +404,11 @@ export default function App() {
         />
       )}
 
-      {showUnlockModal && activeDevice && (
+      {showUnlockModal && (
         <DeviceUnlockModal
-          device={activeDevice}
-          onSuccess={() => setConnectionState('authenticated')}
+          device={unlockTargetDevice}
+          bleDeviceName={pendingBleName}
+          onSuccess={handleUnlockSuccess}
           onClose={() => setShowUnlockModal(false)}
         />
       )}

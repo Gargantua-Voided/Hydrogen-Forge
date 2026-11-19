@@ -1,37 +1,59 @@
 import React, { useState } from 'react';
 import { X, Lock, Eye, EyeOff, RefreshCw } from 'lucide-react';
 import { Device } from '../types';
-import { computePasswordVerifier } from '../services/crypto';
 import { bleConnection } from '../services/bleConnection';
 
+export interface UnlockSuccessInfo {
+  deviceName: string;
+  username: string;
+  password: string;
+  salt: string;
+  firmwareVersion: string;
+}
+
 interface DeviceUnlockModalProps {
-  device: Device;
-  onSuccess: () => void;
+  device: Device | null;
+  bleDeviceName?: string;
+  onSuccess: (info: UnlockSuccessInfo) => void;
   onClose: () => void;
 }
 
 export const DeviceUnlockModal: React.FC<DeviceUnlockModalProps> = ({
   device,
+  bleDeviceName,
   onSuccess,
   onClose,
 }) => {
+  const [username, setUsername] = useState(device?.username || 'admin');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [isVerifying, setIsVerifying] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  const displayName = device?.name || bleDeviceName || 'HydroGen';
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!password) return;
+    const trimmedUser = username.trim();
+    if (!trimmedUser || !password) return;
 
     setIsVerifying(true);
     setError(null);
 
     try {
-      const verifierHex = await computePasswordVerifier(password, device.salt);
-      const res = await bleConnection.authenticate(verifierHex);
+      const res = await bleConnection.authenticateWithPassword(
+        trimmedUser,
+        password,
+        device?.salt
+      );
       if (res.success) {
-        onSuccess();
+        onSuccess({
+          deviceName: res.deviceName || displayName,
+          username: trimmedUser,
+          password,
+          salt: res.salt || device?.salt || '',
+          firmwareVersion: res.firmwareVersion || device?.firmware_version || '1.2.0',
+        });
         onClose();
       } else {
         setError(res.message);
@@ -54,7 +76,7 @@ export const DeviceUnlockModal: React.FC<DeviceUnlockModalProps> = ({
               className="w-6 h-6 object-contain"
             />
             <Lock className="w-4 h-4 text-blue-600" />
-            <h3 className="text-sm font-bold text-slate-900">Unlock {device.name}</h3>
+            <h3 className="text-sm font-bold text-slate-900">Unlock {displayName}</h3>
           </div>
           <button
             type="button"
@@ -65,13 +87,29 @@ export const DeviceUnlockModal: React.FC<DeviceUnlockModalProps> = ({
           </button>
         </div>
 
-        <form onSubmit={handleSubmit} className="mt-4 space-y-4 text-xs">
+        <form onSubmit={handleSubmit} className="mt-4 space-y-3.5 text-xs">
           <div>
-            <label className="block font-medium text-slate-700 mb-1">
-              Password for <strong>{device.username}</strong>
+            <label htmlFor="unlock-username" className="block font-medium text-slate-700 mb-1">
+              Username
+            </label>
+            <input
+              id="unlock-username"
+              type="text"
+              value={username}
+              onChange={(e) => setUsername(e.target.value)}
+              required
+              placeholder="admin"
+              className="w-full px-3 py-2 rounded-lg border border-slate-200 bg-white text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500/30"
+            />
+          </div>
+
+          <div>
+            <label htmlFor="unlock-password" className="block font-medium text-slate-700 mb-1">
+              Password
             </label>
             <div className="relative">
               <input
+                id="unlock-password"
                 type={showPassword ? 'text' : 'password'}
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
@@ -101,7 +139,7 @@ export const DeviceUnlockModal: React.FC<DeviceUnlockModalProps> = ({
             </button>
             <button
               type="submit"
-              disabled={isVerifying || !password}
+              disabled={isVerifying || !username.trim() || !password}
               className="inline-flex items-center gap-1.5 px-4 py-2 font-semibold text-white bg-blue-600 hover:bg-blue-500 rounded-lg disabled:opacity-50"
             >
               {isVerifying && <RefreshCw className="w-3.5 h-3.5 animate-spin" />}
