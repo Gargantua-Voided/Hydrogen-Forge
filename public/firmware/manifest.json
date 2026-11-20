@@ -3,7 +3,7 @@
   "releases": [
     {
       "version": "1.2.0",
-      "release_date": "2026-11-19",
+      "release_date": "2026-11-20",
       "target_chip": "ESP32-S3-DevKitC-1-N16R8",
       "min_app_version": "1.0.0",
       "title": "v1.2.0 — ESP32-S3-DevKitC-1-N16R8 (16MB QIO)",
