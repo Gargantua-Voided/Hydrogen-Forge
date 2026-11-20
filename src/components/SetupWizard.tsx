@@ -363,6 +363,7 @@ export const SetupWizard: React.FC<SetupWizardProps> = ({ onComplete, onCancel }
                 <input
                   type="text"
                   value={deviceName}
+                  maxLength={20}
                   onChange={(e) => setDeviceName(e.target.value)}
                   className="w-full px-3 py-2 rounded-lg border border-slate-200 bg-white text-slate-900"
                 />
@@ -640,6 +641,7 @@ export const SetupWizard: React.FC<SetupWizardProps> = ({ onComplete, onCancel }
                   id="provision-device-name"
                   type="text"
                   value={deviceName}
+                  maxLength={20}
                   onChange={(e) => setDeviceName(e.target.value)}
                   placeholder="HydroGen"
                   disabled={isProvisioning}

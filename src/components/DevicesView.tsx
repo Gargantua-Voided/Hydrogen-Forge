@@ -68,10 +68,11 @@ export const DevicesView: React.FC<DevicesViewProps> = ({
           <button
             type="button"
             onClick={onConnectNewBle}
-            className="h-9 inline-flex items-center justify-center gap-2 px-4 text-xs font-semibold text-white bg-blue-600 hover:bg-blue-500 rounded-lg transition-colors whitespace-nowrap"
+            disabled={connectionState === 'connecting' || connectionState === 'authenticating'}
+            className="h-9 inline-flex items-center justify-center gap-2 px-4 text-xs font-semibold text-white bg-blue-600 hover:bg-blue-500 rounded-lg transition-colors whitespace-nowrap disabled:opacity-60"
           >
-            <Bluetooth className="w-3.5 h-3.5" />
-            <span>Connect via Bluetooth</span>
+            <Bluetooth className={`w-3.5 h-3.5 ${connectionState === 'connecting' ? 'animate-pulse' : ''}`} />
+            <span>{connectionState === 'connecting' ? 'Connecting...' : 'Connect via Bluetooth'}</span>
           </button>
 
           <button
@@ -110,10 +111,11 @@ export const DevicesView: React.FC<DevicesViewProps> = ({
               <button
                 type="button"
                 onClick={onConnectNewBle}
-                className="h-9 inline-flex items-center justify-center gap-2 px-4 text-xs font-semibold text-white bg-blue-600 hover:bg-blue-500 rounded-lg transition-colors whitespace-nowrap"
+                disabled={connectionState === 'connecting' || connectionState === 'authenticating'}
+                className="h-9 inline-flex items-center justify-center gap-2 px-4 text-xs font-semibold text-white bg-blue-600 hover:bg-blue-500 rounded-lg transition-colors whitespace-nowrap disabled:opacity-60"
               >
-                <Bluetooth className="w-3.5 h-3.5" />
-                <span>Connect via Bluetooth</span>
+                <Bluetooth className={`w-3.5 h-3.5 ${connectionState === 'connecting' ? 'animate-pulse' : ''}`} />
+                <span>{connectionState === 'connecting' ? 'Connecting...' : 'Connect via Bluetooth'}</span>
               </button>
             </div>
           </div>

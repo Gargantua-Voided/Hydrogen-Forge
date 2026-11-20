@@ -92,10 +92,11 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
               <button
                 type="button"
                 onClick={onConnectClick}
-                className="h-9 inline-flex items-center justify-center gap-2 px-4 rounded-lg bg-blue-600 hover:bg-blue-500 text-white text-xs font-semibold transition-colors whitespace-nowrap"
+                disabled={connectionState === 'connecting' || connectionState === 'authenticating'}
+                className="h-9 inline-flex items-center justify-center gap-2 px-4 rounded-lg bg-blue-600 hover:bg-blue-500 text-white text-xs font-semibold transition-colors whitespace-nowrap disabled:opacity-60"
               >
-                <Bluetooth className="w-3.5 h-3.5" />
-                <span>Connect via Bluetooth</span>
+                <Bluetooth className={`w-3.5 h-3.5 ${connectionState === 'connecting' ? 'animate-pulse' : ''}`} />
+                <span>{connectionState === 'connecting' ? 'Connecting...' : 'Connect via Bluetooth'}</span>
               </button>
             </div>
           </div>

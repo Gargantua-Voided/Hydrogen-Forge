@@ -301,15 +301,27 @@ export default function App() {
 
       <main className="flex-1 max-w-6xl w-full mx-auto px-4 sm:px-6 py-6">
         {statusError && (
-          <div className="mb-4 rounded-xl border border-rose-200 bg-rose-50 px-4 py-2.5 text-xs text-rose-700 flex items-center justify-between">
+          <div className="mb-4 rounded-xl border border-rose-200 bg-rose-50 px-4 py-2.5 text-xs text-rose-700 flex flex-wrap items-center justify-between gap-2">
             <span>{statusError}</span>
-            <button
-              type="button"
-              onClick={() => setStatusError(null)}
-              className="font-semibold hover:underline ml-4"
-            >
-              Dismiss
-            </button>
+            <div className="flex items-center gap-3 ml-auto shrink-0">
+              {statusError.includes('embedded preview frame') && (
+                <a
+                  href={typeof window !== 'undefined' ? window.location.href : '/'}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="font-semibold text-rose-800 underline hover:text-rose-950"
+                >
+                  Open in New Tab
+                </a>
+              )}
+              <button
+                type="button"
+                onClick={() => setStatusError(null)}
+                className="font-semibold hover:underline"
+              >
+                Dismiss
+              </button>
+            </div>
           </div>
         )}
 

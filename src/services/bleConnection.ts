@@ -46,6 +46,7 @@ class BleConnectionService {
       name === 'networkerror' ||
       msg.includes('disconnected') ||
       msg.includes('gatt server') ||
+      msg.includes('gatt operation') ||
       msg.includes('not connected') ||
       msg.includes('connection')
     );
@@ -124,7 +125,7 @@ class BleConnectionService {
 
       for (let attempt = 1; attempt <= maxAttempts; attempt++) {
         try {
-          if (attempt > 1) {
+          if (attempt > 1 || targetBleDevice.gatt.connected) {
             if (targetBleDevice.gatt.connected) {
               try {
                 targetBleDevice.gatt.disconnect();
@@ -132,7 +133,7 @@ class BleConnectionService {
                 // Ignore stale disconnect errors
               }
             }
-            await this.delay(350 * attempt);
+            await this.delay(attempt === 1 ? 250 : 350 * attempt);
           }
 
           const server = await targetBleDevice.gatt.connect();
@@ -142,10 +143,8 @@ class BleConnectionService {
             );
           }
 
-          // Allow ESP32 NimBLE connection parameter / MTU negotiation to settle slightly on retries
-          if (attempt > 1) {
-            await this.delay(150);
-          }
+          // Allow ESP32 NimBLE LL feature / MTU / connection parameter exchange to settle before GATT discovery
+          await this.delay(attempt === 1 ? 200 : 250);
 
           if (!server.connected) {
             throw new Error(
@@ -163,16 +162,15 @@ class BleConnectionService {
 
           try {
             await statusChar.startNotifications();
-          } catch (notifErr: any) {
-            if (!server.connected || this.isGattDisconnectError(notifErr)) {
-              throw notifErr;
+          } catch {
+            // Notifications on status char are optional; only fail if the link itself dropped
+            if (!server.connected) {
+              throw new Error('GATT Server disconnected while enabling status notifications.');
             }
           }
 
           if (!server.connected) {
-            throw new Error(
-              'GATT Server is disconnected after service discovery.'
-            );
+            throw new Error('GATT Server is disconnected after service discovery.');
           }
 
           this.gattServer = server;
@@ -191,9 +189,13 @@ class BleConnectionService {
         }
       }
 
+      const rawDetail = lastError?.message
+        ? ` (${lastError.name ? `${lastError.name}: ` : ''}${lastError.message})`
+        : '';
+
       if (this.isGattDisconnectError(lastError)) {
         throw new Error(
-          'BLE GATT Server disconnected before services could be retrieved. Ensure HydroGen is powered on, not connected to another host, and forget any stale OS Bluetooth pairing if reflashed.'
+          `BLE GATT connection dropped during service discovery${rawDetail}. Ensure HydroGen is powered on, not connected to another host, and forget any stale pairing in your OS Bluetooth settings if reflashed.`
         );
       }
 
@@ -210,6 +212,13 @@ class BleConnectionService {
       return {
         success: false,
         message: 'Web Bluetooth API is not supported in this browser. Use Chrome or Edge.',
+      };
+    }
+
+    if (typeof window !== 'undefined' && !window.isSecureContext) {
+      return {
+        success: false,
+        message: 'Web Bluetooth requires a secure HTTPS (or localhost) context.',
       };
     }
 
@@ -235,7 +244,7 @@ class BleConnectionService {
 
     try {
       const selectedDevice = await (navigator as any).bluetooth.requestDevice({
-        filters: [{ services: [BLE_SERVICE_UUID] }],
+        filters: [{ services: [BLE_SERVICE_UUID] }, { namePrefix: 'HydroGen' }],
         optionalServices: [BLE_SERVICE_UUID],
       });
 
@@ -255,7 +264,22 @@ class BleConnectionService {
       };
     } catch (e: any) {
       this.cleanupConnection(true);
-      return { success: false, message: e?.message || 'Bluetooth connection canceled or failed.' };
+      const rawMsg = String(e?.message || '');
+      const lowerMsg = rawMsg.toLowerCase();
+
+      if (
+        e?.name === 'SecurityError' ||
+        lowerMsg.includes('permissions policy') ||
+        lowerMsg.includes('disallowed')
+      ) {
+        return {
+          success: false,
+          message:
+            'Web Bluetooth is blocked inside this embedded preview frame. Open the app directly in a standalone Chrome or Edge tab to connect via BLE.',
+        };
+      }
+
+      return { success: false, message: rawMsg || 'Bluetooth connection canceled or failed.' };
     }
   }
 
