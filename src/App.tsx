@@ -3,10 +3,18 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useState, useEffect } from 'react';
-import { Navbar, NavTab } from './components/Navbar';
-import { DashboardView } from './components/DashboardView';
-import { ShortcutsView } from './components/ShortcutsView';
+import React, { useState, useEffect, useMemo } from 'react';
+import {
+  Menu,
+  X,
+  Shield,
+  Lock,
+  Unlock,
+  Bluetooth,
+  Keyboard,
+} from 'lucide-react';
+import { VaultSidebar, VaultNavTab } from './components/VaultSidebar';
+import { VaultView } from './components/VaultView';
 import { DevicesView } from './components/DevicesView';
 import { SetupWizard } from './components/SetupWizard';
 import { FirmwareView } from './components/FirmwareView';
@@ -14,7 +22,6 @@ import { SettingsView } from './components/SettingsView';
 import { ShortcutEditorModal } from './components/ShortcutEditorModal';
 import { ParameterPromptModal } from './components/ParameterPromptModal';
 import { DeviceUnlockModal, UnlockSuccessInfo } from './components/DeviceUnlockModal';
-import { BleTroubleshootModal } from './components/BleTroubleshootModal';
 import { OfflineIndicator } from './components/OfflineIndicator';
 
 import { db } from './services/db';
@@ -28,10 +35,12 @@ import {
   ExecutionLogEntry,
   ConnectionState,
   KeyboardLayoutId,
+  ShortcutCategory,
 } from './types';
 
 export default function App() {
-  const [activeTab, setActiveTab] = useState<NavTab>('dashboard');
+  const [activeNav, setActiveNav] = useState<VaultNavTab>('vault');
+  const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
 
   const [shortcuts, setShortcuts] = useState<Shortcut[]>([]);
   const [devices, setDevices] = useState<Device[]>([]);
@@ -45,7 +54,6 @@ export default function App() {
   const [editingShortcut, setEditingShortcut] = useState<Shortcut | null | undefined>(undefined);
   const [parameterPromptShortcut, setParameterPromptShortcut] = useState<Shortcut | null>(null);
   const [showUnlockModal, setShowUnlockModal] = useState<boolean>(false);
-  const [showTroubleshootModal, setShowTroubleshootModal] = useState<boolean>(false);
   const [unlockTargetDevice, setUnlockTargetDevice] = useState<Device | null>(null);
   const [pendingBleName, setPendingBleName] = useState<string | undefined>(undefined);
 
@@ -124,9 +132,6 @@ export default function App() {
       setShowUnlockModal(true);
     } else {
       setStatusError(res.message);
-      if (res.isWindowsConflict) {
-        setShowTroubleshootModal(true);
-      }
     }
   };
 
@@ -191,7 +196,7 @@ export default function App() {
   const handleRunShortcut = async (shortcut: Shortcut) => {
     setStatusError(null);
     if (connectionState !== 'authenticated') {
-      setStatusError('Connect and authenticate your HydroGen via BLE before running macros.');
+      setStatusError('Unlock your HydroGen hardware key via BLE to inject keystrokes.');
       return;
     }
 
@@ -294,129 +299,222 @@ export default function App() {
     refreshData();
   };
 
-  return (
-    <div className="min-h-screen bg-slate-50 text-slate-900 flex flex-col font-sans">
-      <Navbar
-        activeTab={activeTab}
-        onTabChange={setActiveTab}
-        connectionState={connectionState}
-        activeDevice={activeDevice}
-        onConnectClick={() => handleConnectDevice()}
-      />
+  // Category counts computation for password manager sidebar
+  const categoryCounts = useMemo(() => {
+    const counts: Record<ShortcutCategory, number> = {
+      Productivity: 0,
+      Development: 0,
+      'Text Expander': 0,
+      System: 0,
+      Media: 0,
+      Custom: 0,
+      All: shortcuts.length,
+    };
+    shortcuts.forEach((s) => {
+      if (counts[s.category] !== undefined) {
+        counts[s.category]++;
+      }
+    });
+    return counts;
+  }, [shortcuts]);
 
-      <main className="flex-1 max-w-6xl w-full mx-auto px-4 sm:px-6 py-6">
-        {statusError && (
-          <div className="mb-4 rounded-xl border border-rose-200 bg-rose-50 px-4 py-2.5 text-xs text-rose-700 flex flex-wrap items-center justify-between gap-2 shadow-xs">
-            <span className="font-medium">{statusError}</span>
-            <div className="flex items-center gap-2.5 ml-auto shrink-0">
-              {(statusError.toLowerCase().includes('windows') ||
-                statusError.toLowerCase().includes('gatt') ||
-                statusError.toLowerCase().includes('services')) && (
+  const favoritesCount = useMemo(() => {
+    return shortcuts.filter((s) => s.is_favorite).length;
+  }, [shortcuts]);
+
+  const activeCategoryFilter = useMemo(() => {
+    if (activeNav === 'favorites') return 'Favorites';
+    if (activeNav.startsWith('category_')) {
+      return activeNav.replace('category_', '') as ShortcutCategory;
+    }
+    return 'All';
+  }, [activeNav]);
+
+  const isVaultView =
+    activeNav === 'vault' || activeNav === 'favorites' || activeNav.startsWith('category_');
+
+  return (
+    <div className="h-screen w-screen bg-slate-100 flex flex-col font-sans overflow-hidden">
+      {/* Mobile Top App Bar */}
+      <div className="md:hidden h-14 bg-slate-900 border-b border-slate-800 px-4 flex items-center justify-between shrink-0 z-40 text-white">
+        <div className="flex items-center gap-2.5">
+          <button
+            type="button"
+            onClick={() => setMobileSidebarOpen(!mobileSidebarOpen)}
+            className="p-1.5 -ml-1 text-slate-300 hover:text-white rounded-lg hover:bg-slate-800"
+          >
+            {mobileSidebarOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
+          </button>
+          <div className="flex items-center gap-2">
+            <Shield className="w-4 h-4 text-blue-400" />
+            <span className="font-bold text-sm tracking-tight">HydroGen Vault</span>
+          </div>
+        </div>
+
+        <button
+          type="button"
+          onClick={() => handleConnectDevice()}
+          className={`h-7 px-2.5 rounded-md text-[11px] font-semibold flex items-center gap-1.5 border ${
+            connectionState === 'authenticated'
+              ? 'bg-emerald-950/60 border-emerald-600 text-emerald-400'
+              : connectionState === 'connected'
+              ? 'bg-amber-950/60 border-amber-600 text-amber-400'
+              : 'bg-slate-800 border-slate-700 text-slate-300'
+          }`}
+        >
+          {connectionState === 'authenticated' ? (
+            <>
+              <Unlock className="w-3 h-3 text-emerald-400" />
+              <span>Unlocked</span>
+            </>
+          ) : connectionState === 'connected' ? (
+            <>
+              <Lock className="w-3 h-3 text-amber-400" />
+              <span>Locked</span>
+            </>
+          ) : (
+            <>
+              <Bluetooth className="w-3 h-3" />
+              <span>Offline</span>
+            </>
+          )}
+        </button>
+      </div>
+
+      {/* Main Workspace Layout */}
+      <div className="flex-1 flex overflow-hidden relative">
+        {/* Responsive Vault Sidebar */}
+        <div
+          className={`fixed inset-y-0 left-0 z-50 md:static md:z-auto transition-transform duration-200 md:translate-x-0 ${
+            mobileSidebarOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'
+          }`}
+        >
+          <VaultSidebar
+            activeNav={activeNav}
+            onNavChange={(nav) => {
+              setActiveNav(nav);
+              setMobileSidebarOpen(false);
+            }}
+            connectionState={connectionState}
+            activeDevice={activeDevice}
+            onConnectClick={() => handleConnectDevice()}
+            currentLayout={currentLayout}
+            onLayoutChange={handleLayoutChange}
+            totalShortcutsCount={shortcuts.length}
+            favoritesCount={favoritesCount}
+            categoryCounts={categoryCounts}
+          />
+        </div>
+
+        {/* Mobile backdrop */}
+        {mobileSidebarOpen && (
+          <div
+            className="fixed inset-0 bg-black/50 z-40 md:hidden"
+            onClick={() => setMobileSidebarOpen(false)}
+          />
+        )}
+
+        {/* Main Content Area */}
+        <main className="flex-1 flex flex-col min-w-0 bg-slate-50 overflow-hidden">
+          {statusError && (
+            <div className="m-3 mb-0 rounded-xl border border-rose-200 bg-rose-50 px-4 py-2.5 text-xs text-rose-700 flex flex-wrap items-center justify-between gap-2 shadow-xs shrink-0">
+              <span className="font-medium">{statusError}</span>
+              <div className="flex items-center gap-2.5 ml-auto shrink-0">
+                {statusError.includes('embedded preview frame') && (
+                  <a
+                    href={typeof window !== 'undefined' ? window.location.href : '/'}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="font-semibold text-rose-800 underline hover:text-rose-950"
+                  >
+                    Open in New Tab
+                  </a>
+                )}
                 <button
                   type="button"
-                  onClick={() => setShowTroubleshootModal(true)}
-                  className="font-semibold text-rose-900 bg-rose-100 hover:bg-rose-200 px-2.5 py-1 rounded-md transition-colors"
+                  onClick={() => setStatusError(null)}
+                  className="font-semibold text-rose-600 hover:text-rose-900 hover:underline"
                 >
-                  Troubleshoot Windows BLE
+                  Dismiss
                 </button>
-              )}
-              {statusError.includes('embedded preview frame') && (
-                <a
-                  href={typeof window !== 'undefined' ? window.location.href : '/'}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="font-semibold text-rose-800 underline hover:text-rose-950"
-                >
-                  Open in New Tab
-                </a>
-              )}
-              <button
-                type="button"
-                onClick={() => setStatusError(null)}
-                className="font-semibold text-rose-600 hover:text-rose-900 hover:underline"
-              >
-                Dismiss
-              </button>
+              </div>
             </div>
+          )}
+
+          <div className="flex-1 p-3 sm:p-4 overflow-y-auto flex flex-col">
+            {isVaultView && (
+              <VaultView
+                shortcuts={shortcuts}
+                activeCategoryFilter={activeCategoryFilter}
+                connectionState={connectionState}
+                currentLayout={currentLayout}
+                executionLogs={executionLogs}
+                onRunShortcut={handleRunShortcut}
+                onEditShortcut={(sc) => setEditingShortcut(sc)}
+                onDuplicateShortcut={handleDuplicateShortcut}
+                onDeleteShortcut={handleDeleteShortcut}
+                onToggleFavorite={handleToggleFavorite}
+                onCreateShortcutClick={() => setEditingShortcut(null)}
+                onSendDirectText={handleSendDirectText}
+                onConnectClick={() => handleConnectDevice()}
+              />
+            )}
+
+            {activeNav === 'devices' && (
+              <div className="max-w-4xl w-full mx-auto py-2">
+                <DevicesView
+                  devices={devices}
+                  activeDevice={activeDevice}
+                  connectionState={connectionState}
+                  connectionMode="ble"
+                  onConnect={(dev) => handleConnectDevice(dev)}
+                  onConnectNewBle={() => handleConnectDevice(undefined, true)}
+                  onDisconnect={() => {
+                    bleConnection.disconnect();
+                    setConnectionState('disconnected');
+                  }}
+                  onRefreshDevices={refreshData}
+                  onOpenSetupWizard={() => setActiveNav('setup')}
+                  onOpenFlasher={(dev) => {
+                    if (dev) setActiveDevice(dev);
+                    setActiveNav('firmware');
+                  }}
+                />
+              </div>
+            )}
+
+            {activeNav === 'setup' && (
+              <div className="max-w-xl w-full mx-auto py-2">
+                <SetupWizard
+                  onComplete={(newDev) => {
+                    refreshData();
+                    setActiveDevice(newDev);
+                    setActiveNav('vault');
+                    handleConnectDevice(newDev);
+                  }}
+                  onCancel={() => setActiveNav('vault')}
+                />
+              </div>
+            )}
+
+            {activeNav === 'firmware' && (
+              <div className="max-w-2xl w-full mx-auto py-2">
+                <FirmwareView onConnectClick={() => handleConnectDevice()} />
+              </div>
+            )}
+
+            {activeNav === 'settings' && (
+              <div className="max-w-2xl w-full mx-auto py-2">
+                <SettingsView
+                  currentLayout={currentLayout}
+                  onLayoutChange={handleLayoutChange}
+                  onRefreshAll={refreshData}
+                />
+              </div>
+            )}
           </div>
-        )}
-
-        {activeTab === 'dashboard' && (
-          <DashboardView
-            shortcuts={shortcuts}
-            activeDevice={activeDevice}
-            connectionState={connectionState}
-            currentLayout={currentLayout}
-            onLayoutChange={handleLayoutChange}
-            executionLogs={executionLogs}
-            onRunShortcut={handleRunShortcut}
-            onEditShortcut={(sc) => setEditingShortcut(sc)}
-            onDuplicateShortcut={handleDuplicateShortcut}
-            onDeleteShortcut={handleDeleteShortcut}
-            onToggleFavorite={handleToggleFavorite}
-            onSendDirectText={handleSendDirectText}
-            onConnectClick={() => handleConnectDevice()}
-            onCreateShortcutClick={() => setEditingShortcut(null)}
-            onOpenSetupClick={() => setActiveTab('setup')}
-            onOpenTroubleshoot={() => setShowTroubleshootModal(true)}
-          />
-        )}
-
-        {activeTab === 'shortcuts' && (
-          <ShortcutsView
-            shortcuts={shortcuts}
-            onRunShortcut={handleRunShortcut}
-            onEditShortcut={(sc) => setEditingShortcut(sc)}
-            onDuplicateShortcut={handleDuplicateShortcut}
-            onDeleteShortcut={handleDeleteShortcut}
-            onToggleFavorite={handleToggleFavorite}
-            onCreateShortcutClick={() => setEditingShortcut(null)}
-          />
-        )}
-
-        {activeTab === 'devices' && (
-          <DevicesView
-            devices={devices}
-            activeDevice={activeDevice}
-            connectionState={connectionState}
-            connectionMode="ble"
-            onConnect={(dev) => handleConnectDevice(dev)}
-            onConnectNewBle={() => handleConnectDevice(undefined, true)}
-            onDisconnect={() => {
-              bleConnection.disconnect();
-              setConnectionState('disconnected');
-            }}
-            onRefreshDevices={refreshData}
-            onOpenSetupWizard={() => setActiveTab('setup')}
-            onOpenFlasher={(dev) => {
-              if (dev) setActiveDevice(dev);
-              setActiveTab('firmware');
-            }}
-          />
-        )}
-
-        {activeTab === 'setup' && (
-          <SetupWizard
-            onComplete={(newDev) => {
-              refreshData();
-              setActiveDevice(newDev);
-              setActiveTab('dashboard');
-              handleConnectDevice(newDev);
-            }}
-            onCancel={() => setActiveTab('dashboard')}
-          />
-        )}
-
-        {activeTab === 'firmware' && <FirmwareView onConnectClick={() => handleConnectDevice()} />}
-
-        {activeTab === 'settings' && (
-          <SettingsView
-            currentLayout={currentLayout}
-            onLayoutChange={handleLayoutChange}
-            onRefreshAll={refreshData}
-          />
-        )}
-      </main>
+        </main>
+      </div>
 
       {editingShortcut !== undefined && (
         <ShortcutEditorModal
@@ -445,13 +543,6 @@ export default function App() {
           onClose={() => setShowUnlockModal(false)}
         />
       )}
-
-      <BleTroubleshootModal
-        isOpen={showTroubleshootModal}
-        onClose={() => setShowTroubleshootModal(false)}
-        onRetryConnect={() => handleConnectDevice(undefined, true)}
-        isConnecting={connectionState === 'connecting'}
-      />
 
       <OfflineIndicator />
     </div>

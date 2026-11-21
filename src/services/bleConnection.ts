@@ -212,7 +212,7 @@ class BleConnectionService {
 
       if (this.isGattDisconnectError(lastError)) {
         throw new Error(
-          `[WINDOWS_BLE_CONFLICT] BLE GATT connection dropped during service discovery${rawDetail}. In Windows Settings > Bluetooth & devices, select 'Remove device' for HydroGen, reboot the board, and connect directly from this website.`
+          `BLE GATT connection dropped during service discovery${rawDetail}. Ensure HydroGen is powered on and forget any stale pairing in Bluetooth settings if reflashed.`
         );
       }
 
@@ -229,7 +229,6 @@ class BleConnectionService {
     message: string;
     deviceName?: string;
     bleDeviceId?: string;
-    isWindowsConflict?: boolean;
   }> {
     if (!this.isBleSupported()) {
       return {
@@ -306,18 +305,9 @@ class BleConnectionService {
         };
       }
 
-      const isWindowsConflict =
-        rawMsg.includes('[WINDOWS_BLE_CONFLICT]') ||
-        lowerMsg.includes('gatt server is disconnected') ||
-        lowerMsg.includes('cannot retrieve services') ||
-        this.isGattDisconnectError(e);
-
-      const cleanMsg = rawMsg.replace(/\[WINDOWS_BLE_CONFLICT\]\s*/g, '');
-
       return {
         success: false,
-        message: cleanMsg || 'Bluetooth connection canceled or failed.',
-        isWindowsConflict,
+        message: rawMsg || 'Bluetooth connection canceled or failed.',
       };
     }
   }

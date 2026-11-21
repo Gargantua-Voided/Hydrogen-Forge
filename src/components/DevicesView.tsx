@@ -62,7 +62,12 @@ export const DevicesView: React.FC<DevicesViewProps> = ({
   return (
     <div className="space-y-5">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <h2 className="text-lg font-bold text-slate-900 tracking-tight">Devices</h2>
+        <div>
+          <h2 className="text-lg font-bold text-slate-900 tracking-tight">Hardware Security Tokens</h2>
+          <p className="text-xs text-slate-500 mt-0.5">
+            Registered HydroGen ESP32-S3 tokens used to authenticate and inject keystrokes over USB HID.
+          </p>
+        </div>
 
         <div className="flex flex-wrap items-center gap-2">
           <button
@@ -72,7 +77,7 @@ export const DevicesView: React.FC<DevicesViewProps> = ({
             className="h-9 inline-flex items-center justify-center gap-2 px-4 text-xs font-semibold text-white bg-blue-600 hover:bg-blue-500 rounded-lg transition-colors whitespace-nowrap disabled:opacity-60"
           >
             <Bluetooth className={`w-3.5 h-3.5 ${connectionState === 'connecting' ? 'animate-pulse' : ''}`} />
-            <span>{connectionState === 'connecting' ? 'Connecting...' : 'Connect via Bluetooth'}</span>
+            <span>{connectionState === 'connecting' ? 'Connecting...' : 'Connect Key via Bluetooth'}</span>
           </button>
 
           <button

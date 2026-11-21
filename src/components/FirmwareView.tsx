@@ -260,16 +260,6 @@ export const FirmwareView: React.FC<FirmwareViewProps> = ({ onConnectClick }) =>
             </button>
           </div>
         </div>
-
-        {isComplete && (
-          <div className="p-3 rounded-xl border border-blue-200 bg-blue-50/70 text-xs text-blue-900 flex items-start gap-2">
-            <Bluetooth className="w-4 h-4 text-blue-600 shrink-0 mt-0.5" />
-            <p className="leading-relaxed">
-              <strong>Tip after flashing:</strong> If HydroGen was previously paired in your <em>Windows Bluetooth Settings</em>, 
-              click <strong>&quot;Remove device&quot;</strong> in Windows first so Windows clears old encryption keys before connecting above.
-            </p>
-          </div>
-        )}
       </div>
 
       <div className="rounded-2xl border border-amber-200 bg-amber-50/70 p-4 text-xs text-amber-900 flex items-start gap-2.5">

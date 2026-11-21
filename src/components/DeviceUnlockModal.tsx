@@ -76,7 +76,7 @@ export const DeviceUnlockModal: React.FC<DeviceUnlockModalProps> = ({
               className="w-6 h-6 object-contain"
             />
             <Lock className="w-4 h-4 text-blue-600" />
-            <h3 className="text-sm font-bold text-slate-900">Unlock {displayName}</h3>
+            <h3 className="text-sm font-bold text-slate-900">Unlock Vault · {displayName}</h3>
           </div>
           <button
             type="button"
@@ -105,7 +105,7 @@ export const DeviceUnlockModal: React.FC<DeviceUnlockModalProps> = ({
 
           <div>
             <label htmlFor="unlock-password" className="block font-medium text-slate-700 mb-1">
-              Password
+              Master Password
             </label>
             <div className="relative">
               <input
@@ -115,7 +115,7 @@ export const DeviceUnlockModal: React.FC<DeviceUnlockModalProps> = ({
                 onChange={(e) => setPassword(e.target.value)}
                 required
                 autoFocus
-                placeholder="Enter password..."
+                placeholder="Enter master password..."
                 className="w-full px-3 py-2 pr-9 rounded-lg border border-slate-200 bg-white text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500/30"
               />
               <button
