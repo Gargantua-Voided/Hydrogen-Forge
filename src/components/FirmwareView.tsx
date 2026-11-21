@@ -228,14 +228,14 @@ export const FirmwareView: React.FC<FirmwareViewProps> = ({ onConnectClick }) =>
               <button
                 type="button"
                 onClick={onConnectClick}
-                className="inline-flex items-center gap-2 px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-semibold shadow-sm shadow-emerald-600/20 ring-2 ring-emerald-500/20"
+                className="h-9 inline-flex items-center justify-center gap-2 px-4 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg text-xs font-semibold shadow-xs transition-colors whitespace-nowrap"
               >
                 <span className="relative flex h-2 w-2">
                   <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-white opacity-75" />
                   <span className="relative inline-flex rounded-full h-2 w-2 bg-white" />
                 </span>
-                <Bluetooth className="w-4 h-4" />
-                <span>Connect BLE</span>
+                <Bluetooth className="w-3.5 h-3.5" />
+                <span>Connect via Bluetooth</span>
                 <ArrowRight className="w-3.5 h-3.5" />
               </button>
             )}
@@ -244,22 +244,32 @@ export const FirmwareView: React.FC<FirmwareViewProps> = ({ onConnectClick }) =>
               type="button"
               onClick={handleStartFlash}
               disabled={isFlashing || !canFlash}
-              className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-xl text-xs font-semibold disabled:opacity-40"
+              className="h-9 inline-flex items-center justify-center gap-2 px-4 bg-blue-600 hover:bg-blue-500 text-white rounded-lg text-xs font-semibold disabled:opacity-40 transition-colors whitespace-nowrap"
             >
               {isFlashing ? (
                 <>
-                  <RefreshCw className="w-4 h-4 animate-spin" />
+                  <RefreshCw className="w-3.5 h-3.5 animate-spin" />
                   <span>Flashing...</span>
                 </>
               ) : (
                 <>
-                  <Download className="w-4 h-4" />
+                  <Download className="w-3.5 h-3.5" />
                   <span>Flash ESP32-S3</span>
                 </>
               )}
             </button>
           </div>
         </div>
+
+        {isComplete && (
+          <div className="p-3 rounded-xl border border-blue-200 bg-blue-50/70 text-xs text-blue-900 flex items-start gap-2">
+            <Bluetooth className="w-4 h-4 text-blue-600 shrink-0 mt-0.5" />
+            <p className="leading-relaxed">
+              <strong>Tip after flashing:</strong> If HydroGen was previously paired in your <em>Windows Bluetooth Settings</em>, 
+              click <strong>&quot;Remove device&quot;</strong> in Windows first so Windows clears old encryption keys before connecting above.
+            </p>
+          </div>
+        )}
       </div>
 
       <div className="rounded-2xl border border-amber-200 bg-amber-50/70 p-4 text-xs text-amber-900 flex items-start gap-2.5">

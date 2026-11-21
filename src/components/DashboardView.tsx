@@ -37,6 +37,7 @@ interface DashboardViewProps {
   onConnectClick: () => void;
   onCreateShortcutClick: () => void;
   onOpenSetupClick: () => void;
+  onOpenTroubleshoot?: () => void;
 }
 
 export const DashboardView: React.FC<DashboardViewProps> = ({
@@ -55,6 +56,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
   onConnectClick,
   onCreateShortcutClick,
   onOpenSetupClick,
+  onOpenTroubleshoot,
 }) => {
   const [directText, setDirectText] = useState('');
   const [isSending, setIsSending] = useState(false);
@@ -88,7 +90,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                 Already flashed and provisioned your HydroGen? Connect wirelessly over Bluetooth to unlock and run macros.
               </p>
             </div>
-            <div>
+            <div className="flex items-center gap-2">
               <button
                 type="button"
                 onClick={onConnectClick}
@@ -98,6 +100,15 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                 <Bluetooth className={`w-3.5 h-3.5 ${connectionState === 'connecting' ? 'animate-pulse' : ''}`} />
                 <span>{connectionState === 'connecting' ? 'Connecting...' : 'Connect via Bluetooth'}</span>
               </button>
+              {onOpenTroubleshoot && (
+                <button
+                  type="button"
+                  onClick={onOpenTroubleshoot}
+                  className="h-9 inline-flex items-center justify-center px-3 rounded-lg text-xs font-medium text-slate-500 hover:text-slate-800 hover:bg-slate-100 transition-colors"
+                >
+                  Troubleshoot
+                </button>
+              )}
             </div>
           </div>
 
@@ -166,6 +177,16 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
           </div>
 
           <div className="flex items-center gap-2 shrink-0">
+            {connectionState === 'disconnected' && onOpenTroubleshoot && (
+              <button
+                type="button"
+                onClick={onOpenTroubleshoot}
+                className="h-9 inline-flex items-center justify-center px-3 rounded-lg text-xs font-medium text-slate-500 hover:text-slate-800 hover:bg-slate-100 transition-colors"
+                title="Troubleshoot Windows Bluetooth connection"
+              >
+                <span>Windows Help</span>
+              </button>
+            )}
             <button
               type="button"
               onClick={onConnectClick}
@@ -204,7 +225,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
         </div>
       )}
 
-      {/* Direct HID Type Bar with Target Keyboard Layout Selector */}
+      {/* Direct HID Type Bar with explicit Target Keyboard Layout Selector */}
       <form
         onSubmit={handleDirectSend}
         className={`rounded-2xl border p-2.5 pl-4 shadow-xs flex flex-wrap sm:flex-nowrap items-center gap-2.5 transition-all ${
@@ -233,31 +254,38 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
 
         <div className="flex items-center gap-2 ml-auto shrink-0">
           <div
-            className="h-9 inline-flex items-center p-1 bg-slate-100 border border-slate-200/80 rounded-lg text-xs"
-            title="Target PC Keyboard Layout"
+            className="h-9 inline-flex items-center gap-1.5 px-2 bg-slate-100 border border-slate-200/80 rounded-lg text-xs"
+            title="Target PC Keyboard Scancode Layout: German QWERTZ or US QWERTY"
           >
-            <button
-              type="button"
-              onClick={() => onLayoutChange('DE_QWERTZ')}
-              className={`h-7 px-2.5 font-semibold rounded-md transition-colors whitespace-nowrap ${
-                currentLayout === 'DE_QWERTZ'
-                  ? 'bg-white text-slate-900 shadow-xs'
-                  : 'text-slate-500 hover:text-slate-800'
-              }`}
-            >
-              DE
-            </button>
-            <button
-              type="button"
-              onClick={() => onLayoutChange('US')}
-              className={`h-7 px-2.5 font-semibold rounded-md transition-colors whitespace-nowrap ${
-                currentLayout === 'US'
-                  ? 'bg-white text-slate-900 shadow-xs'
-                  : 'text-slate-500 hover:text-slate-800'
-              }`}
-            >
-              US
-            </button>
+            <span className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider">
+              PC Layout
+            </span>
+            <div className="inline-flex items-center p-0.5 bg-slate-200/70 rounded-md">
+              <button
+                type="button"
+                onClick={() => onLayoutChange('DE_QWERTZ')}
+                className={`h-6 px-2 text-[11px] font-semibold rounded transition-colors whitespace-nowrap ${
+                  currentLayout === 'DE_QWERTZ'
+                    ? 'bg-white text-slate-900 shadow-xs'
+                    : 'text-slate-500 hover:text-slate-800'
+                }`}
+                title="German QWERTZ keyboard (supports ä, ö, ü, ß)"
+              >
+                DE
+              </button>
+              <button
+                type="button"
+                onClick={() => onLayoutChange('US')}
+                className={`h-6 px-2 text-[11px] font-semibold rounded transition-colors whitespace-nowrap ${
+                  currentLayout === 'US'
+                    ? 'bg-white text-slate-900 shadow-xs'
+                    : 'text-slate-500 hover:text-slate-800'
+                }`}
+                title="US QWERTY keyboard"
+              >
+                US
+              </button>
+            </div>
           </div>
 
           <button

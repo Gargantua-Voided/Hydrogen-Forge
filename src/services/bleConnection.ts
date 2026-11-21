@@ -117,7 +117,7 @@ class BleConnectionService {
       throw new Error('Selected Bluetooth device does not expose a GATT server.');
     }
 
-    const maxAttempts = 4;
+    const maxAttempts = 3;
     this.isConnecting = true;
 
     try {
@@ -133,7 +133,7 @@ class BleConnectionService {
                 // Ignore stale disconnect errors
               }
             }
-            await this.delay(attempt === 1 ? 250 : 350 * attempt);
+            await this.delay(attempt === 1 ? 300 : 500 * attempt);
           }
 
           const server = await targetBleDevice.gatt.connect();
@@ -143,8 +143,9 @@ class BleConnectionService {
             );
           }
 
-          // Allow ESP32 NimBLE LL feature / MTU / connection parameter exchange to settle before GATT discovery
-          await this.delay(attempt === 1 ? 200 : 250);
+          // Allow ESP32 NimBLE LL feature exchange / MTU / connection parameter update to settle.
+          // On Windows, the OS BLE driver takes 400-600ms to stabilize GATT database caching.
+          await this.delay(attempt === 1 ? 450 : 650);
 
           if (!server.connected) {
             throw new Error(
@@ -152,7 +153,23 @@ class BleConnectionService {
             );
           }
 
-          const service = await server.getPrimaryService(BLE_SERVICE_UUID);
+          let service: any = null;
+          try {
+            service = await server.getPrimaryService(BLE_SERVICE_UUID);
+          } catch (svcErr: any) {
+            // If primary service query failed on attempt 1 but server is still connected, give it one quick grace retry
+            if (server.connected && this.isGattDisconnectError(svcErr)) {
+              await this.delay(350);
+              if (server.connected) {
+                service = await server.getPrimaryService(BLE_SERVICE_UUID);
+              } else {
+                throw svcErr;
+              }
+            } else {
+              throw svcErr;
+            }
+          }
+
           const authChar = await service.getCharacteristic(BLE_CHAR_AUTH_UUID);
           const commandChar = await service.getCharacteristic(BLE_CHAR_COMMAND_UUID);
           const statusChar = await service.getCharacteristic(BLE_CHAR_STATUS_UUID);
@@ -195,7 +212,7 @@ class BleConnectionService {
 
       if (this.isGattDisconnectError(lastError)) {
         throw new Error(
-          `BLE GATT connection dropped during service discovery${rawDetail}. Ensure HydroGen is powered on, not connected to another host, and forget any stale pairing in your OS Bluetooth settings if reflashed.`
+          `[WINDOWS_BLE_CONFLICT] BLE GATT connection dropped during service discovery${rawDetail}. In Windows Settings > Bluetooth & devices, select 'Remove device' for HydroGen, reboot the board, and connect directly from this website.`
         );
       }
 
@@ -207,7 +224,13 @@ class BleConnectionService {
 
   async connect(
     targetDevice?: Device
-  ): Promise<{ success: boolean; message: string; deviceName?: string; bleDeviceId?: string }> {
+  ): Promise<{
+    success: boolean;
+    message: string;
+    deviceName?: string;
+    bleDeviceId?: string;
+    isWindowsConflict?: boolean;
+  }> {
     if (!this.isBleSupported()) {
       return {
         success: false,
@@ -244,7 +267,11 @@ class BleConnectionService {
 
     try {
       const selectedDevice = await (navigator as any).bluetooth.requestDevice({
-        filters: [{ services: [BLE_SERVICE_UUID] }, { namePrefix: 'HydroGen' }],
+        filters: [
+          { services: [BLE_SERVICE_UUID] },
+          { namePrefix: 'HydroGen' },
+          { name: 'HydroGen' },
+        ],
         optionalServices: [BLE_SERVICE_UUID],
       });
 
@@ -279,7 +306,19 @@ class BleConnectionService {
         };
       }
 
-      return { success: false, message: rawMsg || 'Bluetooth connection canceled or failed.' };
+      const isWindowsConflict =
+        rawMsg.includes('[WINDOWS_BLE_CONFLICT]') ||
+        lowerMsg.includes('gatt server is disconnected') ||
+        lowerMsg.includes('cannot retrieve services') ||
+        this.isGattDisconnectError(e);
+
+      const cleanMsg = rawMsg.replace(/\[WINDOWS_BLE_CONFLICT\]\s*/g, '');
+
+      return {
+        success: false,
+        message: cleanMsg || 'Bluetooth connection canceled or failed.',
+        isWindowsConflict,
+      };
     }
   }
 

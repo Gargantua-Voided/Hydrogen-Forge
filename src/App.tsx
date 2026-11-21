@@ -14,6 +14,7 @@ import { SettingsView } from './components/SettingsView';
 import { ShortcutEditorModal } from './components/ShortcutEditorModal';
 import { ParameterPromptModal } from './components/ParameterPromptModal';
 import { DeviceUnlockModal, UnlockSuccessInfo } from './components/DeviceUnlockModal';
+import { BleTroubleshootModal } from './components/BleTroubleshootModal';
 import { OfflineIndicator } from './components/OfflineIndicator';
 
 import { db } from './services/db';
@@ -44,6 +45,7 @@ export default function App() {
   const [editingShortcut, setEditingShortcut] = useState<Shortcut | null | undefined>(undefined);
   const [parameterPromptShortcut, setParameterPromptShortcut] = useState<Shortcut | null>(null);
   const [showUnlockModal, setShowUnlockModal] = useState<boolean>(false);
+  const [showTroubleshootModal, setShowTroubleshootModal] = useState<boolean>(false);
   const [unlockTargetDevice, setUnlockTargetDevice] = useState<Device | null>(null);
   const [pendingBleName, setPendingBleName] = useState<string | undefined>(undefined);
 
@@ -122,6 +124,9 @@ export default function App() {
       setShowUnlockModal(true);
     } else {
       setStatusError(res.message);
+      if (res.isWindowsConflict) {
+        setShowTroubleshootModal(true);
+      }
     }
   };
 
@@ -301,9 +306,20 @@ export default function App() {
 
       <main className="flex-1 max-w-6xl w-full mx-auto px-4 sm:px-6 py-6">
         {statusError && (
-          <div className="mb-4 rounded-xl border border-rose-200 bg-rose-50 px-4 py-2.5 text-xs text-rose-700 flex flex-wrap items-center justify-between gap-2">
-            <span>{statusError}</span>
-            <div className="flex items-center gap-3 ml-auto shrink-0">
+          <div className="mb-4 rounded-xl border border-rose-200 bg-rose-50 px-4 py-2.5 text-xs text-rose-700 flex flex-wrap items-center justify-between gap-2 shadow-xs">
+            <span className="font-medium">{statusError}</span>
+            <div className="flex items-center gap-2.5 ml-auto shrink-0">
+              {(statusError.toLowerCase().includes('windows') ||
+                statusError.toLowerCase().includes('gatt') ||
+                statusError.toLowerCase().includes('services')) && (
+                <button
+                  type="button"
+                  onClick={() => setShowTroubleshootModal(true)}
+                  className="font-semibold text-rose-900 bg-rose-100 hover:bg-rose-200 px-2.5 py-1 rounded-md transition-colors"
+                >
+                  Troubleshoot Windows BLE
+                </button>
+              )}
               {statusError.includes('embedded preview frame') && (
                 <a
                   href={typeof window !== 'undefined' ? window.location.href : '/'}
@@ -317,7 +333,7 @@ export default function App() {
               <button
                 type="button"
                 onClick={() => setStatusError(null)}
-                className="font-semibold hover:underline"
+                className="font-semibold text-rose-600 hover:text-rose-900 hover:underline"
               >
                 Dismiss
               </button>
@@ -342,6 +358,7 @@ export default function App() {
             onConnectClick={() => handleConnectDevice()}
             onCreateShortcutClick={() => setEditingShortcut(null)}
             onOpenSetupClick={() => setActiveTab('setup')}
+            onOpenTroubleshoot={() => setShowTroubleshootModal(true)}
           />
         )}
 
@@ -428,6 +445,13 @@ export default function App() {
           onClose={() => setShowUnlockModal(false)}
         />
       )}
+
+      <BleTroubleshootModal
+        isOpen={showTroubleshootModal}
+        onClose={() => setShowTroubleshootModal(false)}
+        onRetryConnect={() => handleConnectDevice(undefined, true)}
+        isConnecting={connectionState === 'connecting'}
+      />
 
       <OfflineIndicator />
     </div>
